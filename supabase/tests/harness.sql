@@ -49,3 +49,19 @@ $$;
 
 grant usage on schema auth to anon, authenticated, service_role;
 grant select on auth.users to service_role;
+
+/*
+ * Ogni progetto Supabase nasce con questi default privileges sullo schema
+ * public. Sono la ragione per cui una migrazione che non concede nulla ad
+ * `anon` si ritrova comunque `anon` con tutti i permessi su ogni tabella che
+ * crea.
+ *
+ * Riprodurli qui non è pedanteria: senza, i test girano su uno schema più
+ * pulito di quello reale e non vedrebbero mai il problema. È esattamente
+ * quello che è successo — il difetto è saltato fuori solo interrogando il
+ * progetto vero, e questa riga esiste perché non succeda di nuovo.
+ */
+alter default privileges in schema public
+  grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on sequences to anon, authenticated, service_role;

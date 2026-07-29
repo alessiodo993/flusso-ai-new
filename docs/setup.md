@@ -22,6 +22,9 @@ Il file è **`supabase/migrations/0001_flusso.sql`**. Due strade.
 1. Dashboard → **SQL Editor** → **New query**.
 2. Incolla **tutto** il contenuto di `supabase/migrations/0001_flusso.sql`.
 3. **Run**.
+4. Ripeti per **ogni** file in `supabase/migrations/`, in ordine di numero:
+   `0002_google_channels.sql`, `0003_revoke_anon.sql`, e così via.
+   La `0003` non è facoltativa — vedi il riquadro qui sotto.
 
 Deve finire con `Success. No rows returned`. Se ti fermi a metà per un errore,
 non rilanciare il file da capo: le tabelle già create farebbero fallire i
@@ -67,6 +70,30 @@ npm run db:test
 
 applica la migrazione a un database usa e getta e ci lancia contro trenta
 verifiche su RLS, permessi, trigger e vincoli.
+
+> ### Perché la migrazione `0003` è necessaria
+>
+> Ogni progetto Supabase nasce con questa impostazione:
+>
+> ```sql
+> alter default privileges in schema public
+>   grant all on tables to postgres, anon, authenticated, service_role;
+> ```
+>
+> Vale per **ogni tabella creata dopo**, comprese le nostre. Il risultato è che
+> `anon` — il ruolo della chiave pubblicata nel bundle del browser — ottiene
+> `SELECT`, `INSERT`, `UPDATE` e `DELETE` su tutto, `google_accounts` inclusa,
+> anche se la migrazione `0001` non gli concede nulla.
+>
+> I dati restano protetti dalle RLS, che senza policy per `anon` negano ogni
+> riga. Ma è **una protezione sola**: basterebbe una tabella futura con la RLS
+> dimenticata perché quella chiave diventi una chiave di lettura. La `0003`
+> revoca quei privilegi e annulla il default per le tabelle future.
+>
+> Il difetto è emerso interrogando un progetto vero, non in locale: il
+> PostgreSQL usa e getta dei test non aveva quei default. Ora
+> `supabase/tests/harness.sql` li riproduce, e `npm run db:test` fallisce se
+> la `0003` manca.
 
 > **Il linter di Supabase segnalerà `google_accounts_public` come
 > "security definer view".** È voluto: quella vista serve a mostrare

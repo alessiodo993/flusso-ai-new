@@ -498,3 +498,39 @@ colonne, la BottomNav e il FAB sono stati controllati così. La pagina
   assegnare i colori e attivare la scrittura: passo 12. Fino ad allora
   `enabled` arriva da ciò che l'utente ha già scelto su Google e
   `is_write_target` va impostato a mano.
+
+---
+
+## Nota — privilegi di `anon` sul progetto reale
+
+Collegando il primo progetto Supabase vero è emerso un difetto che i test in
+locale non potevano vedere.
+
+**Cosa succedeva.** La migrazione `0001` non concede nulla ad `anon`, come
+chiede la specifica. Ma ogni progetto Supabase nasce con
+
+```sql
+alter default privileges in schema public
+  grant all on tables to postgres, anon, authenticated, service_role;
+```
+
+e quel default si applica a ogni tabella creata dopo. Interrogando il progetto
+con la sola chiave pubblicata nel browser, `anon` risultava avere `SELECT`,
+`INSERT`, `UPDATE` e `DELETE` su **tutte** le tabelle, `google_accounts`
+compresa. La prova: una richiesta su una colonna inesistente rispondeva
+«column does not exist» invece di «permission denied» — segno di essere
+passata oltre il controllo dei privilegi.
+
+**Quanto era grave.** I dati non erano esposti: le RLS, senza alcuna policy
+per `anon`, negavano ogni riga, e un inserimento anonimo veniva respinto con
+`42501`. Ma restava **una protezione sola** dove ne erano previste due.
+
+**Come è stato risolto.**
+- `supabase/migrations/0003_revoke_anon.sql` revoca i privilegi ad `anon` su
+  tabelle, sequenze e funzioni, annulla il default per quelle future, e toglie
+  ad `authenticated` i permessi su `google_accounts` che il default gli aveva
+  dato.
+- `supabase/tests/harness.sql` ora **riproduce i default privileges di
+  Supabase**. Senza, i test giravano su uno schema più pulito di quello vero.
+  Verificato per controprova: con sole `0001` e `0002` il test fallisce con
+  «anon può leggere projects»; con la `0003` torna verde.

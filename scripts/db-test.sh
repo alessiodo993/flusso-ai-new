@@ -34,8 +34,12 @@ echo "→ ricreo il database $DB"
 echo "→ contorno Supabase (ruoli, schema auth, auth.uid)"
 "${PSQL[@]}" -d "$DB" -f supabase/tests/harness.sql >/dev/null
 
-echo "→ migrazione"
-"${PSQL[@]}" -d "$DB" -f supabase/migrations/0001_flusso.sql >/dev/null
+echo "→ migrazioni"
+# In ordine di nome: è l'ordine in cui le applica anche la CLI di Supabase.
+for migration in supabase/migrations/*.sql; do
+  echo "   · $(basename "$migration")"
+  "${PSQL[@]}" -d "$DB" -f "$migration" >/dev/null
+done
 
 echo "→ verifiche"
 # -t -A: gli helper restituiscono già la riga di esito, senza intestazioni.
