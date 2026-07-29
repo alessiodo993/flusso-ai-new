@@ -12,11 +12,13 @@ import { usePlannerContext } from "@/lib/hooks/use-planner-context";
 import { useReviews, useSaveReview } from "@/lib/hooks/use-reviews";
 import {
   useDeleteTasks,
+  useRestoreTasks,
   useScheduleTask,
   useTasks,
   useUnscheduleTask,
   useUpdateTask,
 } from "@/lib/hooks/use-tasks";
+import { undoableToast } from "@/lib/hooks/use-undo";
 import { availableGaps } from "@/lib/planner";
 import {
   carryOverLeft,
@@ -61,6 +63,7 @@ export function ShutdownSheet() {
   const unschedule = useUnscheduleTask();
   const update = useUpdateTask();
   const remove = useDeleteTasks();
+  const restore = useRestoreTasks();
   const context = usePlannerContext();
   const ai = useAiShutdown();
 
@@ -114,6 +117,8 @@ export function ShutdownSheet() {
   }, [ai, choices, context, pending, tomorrow]);
 
   const confirm = useCallback(async () => {
+    const dropped = pending.filter((task) => choices[task.id] === "elimina");
+
     for (const task of pending) {
       const choice = choices[task.id];
       if (!choice) continue;
@@ -146,8 +151,21 @@ export function ShutdownSheet() {
       notes: notes.trim() || null,
     });
 
-    toast.success("Giornata chiusa.");
     setOpen(false);
+
+    // Anche dentro un rito, «lascia perdere» resta annullabile: la scelta si
+    // fa in fretta, in fondo a una giornata stanca.
+    if (dropped.length > 0) {
+      undoableToast({
+        message:
+          dropped.length === 1
+            ? `Giornata chiusa. «${dropped[0].title}» eliminato.`
+            : `Giornata chiusa. ${dropped.length} task eliminati.`,
+        onUndo: () => restore.mutate({ tasks: dropped }),
+      });
+    } else {
+      toast.success("Giornata chiusa.");
+    }
   }, [
     choices,
     notes,
@@ -158,6 +176,7 @@ export function ShutdownSheet() {
     suggestions,
     tomorrow,
     totals,
+    restore,
     unschedule,
     update,
   ]);

@@ -953,3 +953,131 @@ rispondere 404. È lo stesso inciampo del passo 11, in una forma diversa. Non
 - Passo 13: stati vuoti rimanenti, undo dove manca, a11y, virtualizzazione
   del calendario oltre le 200 righe, service worker PWA (che abiliterebbe
   anche i pulsanti azione delle notifiche, rimandati dal passo 8).
+
+---
+
+## Passo 13 — Rifinitura: PWA, accessibilità, performance, deploy
+
+### Accessibilità: nove violazioni trovate e corrette
+
+Aggiunti due controlli eseguibili, perché «abbiamo messo gli aria-label» non
+è una verifica:
+
+- **`npm run a11y`** — axe su sette schermate, in tema chiaro **e scuro**.
+- **`npm run keyboard`** — fuoco visibile, raggiungibilità col Tab, e
+  dimensione dei bersagli tattili a 390px.
+
+Cosa hanno trovato:
+
+1. **`--ink-faint` a 2.6:1**, dove serve 4.5. Era il grigio di etichette,
+   suggerimenti e segnaposto: leggibile per me, non per chi guarda lo schermo
+   al sole. Rifatti i due grigi e l'ambra.
+2. **I «fatto» si spegnevano con l'opacità**, portando sotto soglia anche il
+   testo. Ora si smorza lo **sfondo**: un blocco completato resta leggibile,
+   perché è ancora la prova di come è andata la giornata.
+3. **Tre colori della palette non reggevano il bianco** — blu 4.39, cuoio
+   4.19, oliva 3.75 — e nessuno dei colori regge l'inchiostro scuro. Corretti
+   nella palette e, soprattutto, aggiunto **`blockSurface`**: scurisce
+   qualunque colore a passi del 4% fino alla soglia. Serve perché i colori
+   arrivano dal database e possono essere stati scelti prima di questa regola.
+   Coperto da un test che gira su tutto lo spazio RGB a passi di 51.
+4. **`nested-interactive`**: dnd-kit metteva `role="button"` e `tabIndex` sul
+   blocco del calendario, che contiene altri tre controlli. Rimossi: il
+   trascinamento col puntatore resta, e da tastiera un blocco si sposta
+   aprendolo e usando «Sposta a…», che è anche più preciso.
+5. **`aria-hidden-focus`**: i campi della CaptureBar collassata erano nascosti
+   agli screen reader ma raggiungibili col Tab — il caso peggiore, il fuoco
+   finisce in un campo alto zero pixel che non viene annunciato. Aggiunto
+   `inert`.
+6. **Bersagli tattili sotto i 44px** su telefono: chip cliccabili (25×23),
+   segmentati (32px), pulsanti nei banner (40px), striscia dei giorni.
+   Corretti con `min-height`/`min-width` che si stringono da 1080px in su,
+   dove c'è un puntatore.
+
+Sette giorni da 44px più due frecce da 44 fanno 396: su un telefono da 390 non
+ci stanno, e stringere i giorni a 43 per far quadrare i conti sarebbe barare.
+**La striscia scorre invece di comprimersi.**
+
+I comandi dentro i blocchi (▶ e ✓, 24×24) restano un'**eccezione dichiarata**,
+non una dimenticanza: portarli a 44px coprirebbe il blocco che devono
+comandare, e la stessa azione esiste a dimensione piena nel pannello del task.
+È il caso previsto da WCAG 2.2 §2.5.8; lo script lo elenca a parte e verifica
+che il minimo di 24px sia rispettato.
+
+### Un difetto scoperto guardando altrove
+
+`toGoogleColorId` scendeva sul colore più vicino in **distanza euclidea RGB**.
+Sembra la scelta ovvia e sbaglia in modo visibile: il verde bosco di Flusso ha
+come vicino numerico il **grigio** di Google, perché è più spento dei verdi
+saturi della tavolozza. Sul calendario condiviso i blocchi risultavano grigi,
+cioè privi dell'unica informazione che il colore doveva dare. Ora la scelta è
+per **tinta**, con la luminosità come spareggio fra verde chiaro e scuro, e i
+colori senza tinta vanno nel grigio perché è dove appartengono. 19 test.
+
+### PWA e notifiche complete
+
+Il service worker esiste per **una** ragione: i pulsanti «Inizia» e «Rimanda
+15 min» nelle notifiche di inizio blocco. Una `new Notification()` creata dal
+documento non supporta le azioni; solo `registration.showNotification` sì. Era
+il pezzo rimandato dal passo 8.
+
+Strategia **rete prima, cache come rete di sicurezza**, mai il contrario: un
+calendario è utile solo se dice la verità adesso. Più una pagina di cortesia
+offline che lo dice a parole. In sviluppo il worker **non si registra**: un
+worker che serve una cache mentre si ricompila è il modo più rapido per
+inseguire un difetto che non esiste.
+
+«Rimanda 15 min» **non conta come rinvio** e non incrementa il contatore:
+rinviare è mandare una cosa a un altro giorno, questo è finire la telefonata
+prima di cominciare. Confonderli farebbe scattare il dialogo del terzo rinvio
+per tre pause caffè.
+
+### Performance: misurata, non supposta
+
+La specifica chiede il calendario virtualizzato oltre le 200 righe. Misurato:
+**223–260 nodi DOM** a ogni livello di zoom, perché la finestra visibile si
+adatta al contenuto e le righe sono al massimo 96 su una giornata intera.
+Virtualizzarlo sarebbe stata macchineria per niente.
+
+Quello che cresce senza limite è la **Lista**. Lì c'è un taglio a 150 card con
+«Mostra altri N». Un taglio e non una finestra scorrevole: la virtualizzazione
+rompe `Ctrl+F` del browser e la selezione del testo, e qui il caso d'uso non è
+scorrere mille task ma trovarne uno — cosa che si fa coi filtri.
+
+### Un difetto trovato provando la build di produzione
+
+Con la rete che non raggiungeva Supabase, il pulsante «Accedi» girava **per
+sempre**: nessun messaggio, nessun modo di sapere se era andata o no.
+Aggiunto un limite di 20 secondi a tutte le chiamate di autenticazione, con un
+messaggio che dice anche la cosa che serve sapere: *«quello che hai scritto è
+ancora qui»*. 7 test.
+
+### Undo completato
+Aggiunto dove mancava: eliminazione di una ricorrenza, e «lascia perdere»
+dentro lo shutdown — anche in un rito la scelta si fa in fretta, in fondo a
+una giornata stanca.
+
+### Verificato
+- `npm run a11y`: **nessuna violazione** su sette schermate e due temi.
+- `npm run keyboard`: fuoco visibile, tutto raggiungibile, bersagli a norma.
+- Build di produzione servita con `next start`: `/app` senza sessione
+  reindirizza a `/login`, il manifest e il service worker si servono, la
+  pagina offline c'è, e il login riporta l'errore di rete invece di restare
+  appeso.
+- **319 test.**
+
+### Nota operativa, la terza volta
+`npm run build` mentre gira `next dev` sulla stessa cartella lascia il server
+di sviluppo con una `.next` che non è più la sua, e le pagine cominciano a
+rispondere 404. Ormai è un riflesso: dopo ogni build, riavviare il dev.
+
+### Il link
+`docs/deploy.md` è la guida click-by-click a Vercel, con la tabella delle
+variabili e i due passi che si dimenticano sempre — le Redirect URLs di
+Supabase e il redirect URI di Google. `scripts/deploy-vercel.sh` fa la stessa
+cosa in un comando, se si ha un token Vercel: carica le variabili da
+`.env.local`, pubblica, poi scrive `APP_URL` col dominio assegnato e
+ripubblica, perché quel valore non si può sapere prima.
+
+Verificato che la build **passa anche senza nessuna variabile d'ambiente**: su
+Vercel il primo deploy non fallisce prima che si faccia in tempo a impostarle.

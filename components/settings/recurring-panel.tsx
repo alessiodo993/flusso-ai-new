@@ -11,6 +11,7 @@ import {
   useUpdateRecurring,
 } from "@/lib/hooks/use-recurring";
 import { useProjects } from "@/lib/hooks/use-projects";
+import { undoableToast } from "@/lib/hooks/use-undo";
 import { fmtDuration, fmtMin, SLOT } from "@/lib/time";
 import type { Recurring } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -119,7 +120,21 @@ export function RecurringPanel() {
             }
             projects={projects.map((p) => ({ value: p.id, label: p.name }))}
             onChange={(changes) => update.mutate({ id: one.id, ...changes })}
-            onDelete={() => remove.mutate({ id: one.id })}
+            onDelete={() => {
+              remove.mutate({ id: one.id });
+              undoableToast({
+                message: `«${one.title}» non si ripeterà più.`,
+                onUndo: () =>
+                  create.mutate({
+                    title: one.title,
+                    projectId: one.project_id,
+                    estMinutes: one.est_minutes,
+                    freq: one.freq,
+                    dow: one.dow,
+                    startMinute: one.start_minute,
+                  }),
+              });
+            }}
           />
         ))}
       </ul>

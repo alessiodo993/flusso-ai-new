@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { authErrorMessage } from "@/lib/auth-errors";
+import { authErrorMessage, withTimeout } from "@/lib/auth-errors";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 /**
@@ -54,11 +54,10 @@ export function ResetPasswordForm() {
     setPending(true);
     try {
       const supabase = supabaseBrowser();
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email,
-        {
+      const { error: resetError } = await withTimeout(
+        supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-        },
+        }),
       );
       if (resetError) throw resetError;
       setSent(true);
@@ -75,9 +74,9 @@ export function ResetPasswordForm() {
     setPending(true);
     try {
       const supabase = supabaseBrowser();
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      });
+      const { error: updateError } = await withTimeout(
+        supabase.auth.updateUser({ password }),
+      );
       if (updateError) throw updateError;
       router.refresh();
       router.replace("/app");

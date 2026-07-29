@@ -41,7 +41,39 @@ const MAP: Array<[RegExp, string]> = [
     /failed to fetch|networkerror/i,
     "Connessione non riuscita. Controlla la rete e riprova.",
   ],
+  [
+    /^tempo scaduto$/,
+    "Il server non ha risposto. Controlla la rete e riprova: quello che hai scritto è ancora qui.",
+  ],
 ];
+
+/**
+ * Quanto si aspetta una risposta prima di dire che non arriverà.
+ *
+ * Senza questo limite una richiesta che non torna mai lascia il pulsante a
+ * girare **per sempre**, senza un messaggio: l'utente non sa se ha funzionato,
+ * se deve riprovare, o se è colpa sua. Visto succedere davvero, con la rete
+ * che non raggiungeva Supabase.
+ */
+export const AUTH_TIMEOUT = 20_000;
+
+export async function withTimeout<T>(
+  promise: PromiseLike<T>,
+  ms = AUTH_TIMEOUT,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("tempo scaduto")), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export function authErrorMessage(error: unknown): string {
   const raw =

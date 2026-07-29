@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
-import { authErrorMessage } from "@/lib/auth-errors";
+import { authErrorMessage, withTimeout } from "@/lib/auth-errors";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 type Mode = "signin" | "signup";
@@ -36,13 +36,15 @@ export function LoginForm() {
       const supabase = supabaseBrowser();
 
       if (mode === "signup") {
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-          },
-        });
+        const { data, error: signUpError } = await withTimeout(
+          supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+            },
+          }),
+        );
         if (signUpError) throw signUpError;
 
         // Con la conferma email attiva Supabase non apre la sessione subito.
@@ -53,10 +55,9 @@ export function LoginForm() {
           return;
         }
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error: signInError } = await withTimeout(
+          supabase.auth.signInWithPassword({ email, password }),
+        );
         if (signInError) throw signInError;
       }
 
@@ -75,12 +76,14 @@ export function LoginForm() {
     setPending("google");
     try {
       const supabase = supabaseBrowser();
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        },
-      });
+      const { error: oauthError } = await withTimeout(
+        supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          },
+        }),
+      );
       if (oauthError) throw oauthError;
       // Da qui il browser va su Google: nessun altro stato da gestire.
     } catch (caught) {
