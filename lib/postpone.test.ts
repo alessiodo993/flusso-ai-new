@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { isPostponement } from "./postpone";
+import {
+  isPostponement,
+  MICRO_START_FROM,
+  needsMicroStart,
+} from "./postpone";
 import type { Task } from "./types";
 
 function task(day: string | null): Task {
@@ -61,5 +65,30 @@ describe("isPostponement", () => {
     expect(isPostponement(task("2026-09-30"), "2026-10-01")).toBe(true);
     expect(isPostponement(task("2026-12-31"), "2027-01-01")).toBe(true);
     expect(isPostponement(task("2027-01-01"), "2026-12-31")).toBe(false);
+  });
+});
+
+describe("needsMicroStart", () => {
+  /** Lo stesso task, con il contatore dei rinvii che ci serve. */
+  const slipping = (count: number, extra: Partial<Task> = {}): Task => ({
+    ...task(null),
+    postpone_count: count,
+    ...extra,
+  });
+
+  it("si offre dal secondo rinvio in poi", () => {
+    expect(needsMicroStart(slipping(0))).toBe(false);
+    expect(needsMicroStart(slipping(1))).toBe(false);
+    expect(needsMicroStart(slipping(MICRO_START_FROM))).toBe(true);
+    expect(needsMicroStart(slipping(7))).toBe(true);
+  });
+
+  it("non si offre su ciò che è già chiuso", () => {
+    // Un permesso di cominciare non serve a un task finito, né a uno messo
+    // via: comparirebbe come rumore in due liste che devono restare quiete.
+    expect(needsMicroStart(slipping(5, { status: "done" }))).toBe(false);
+    expect(needsMicroStart(slipping(5, { status_review: "archived" }))).toBe(
+      false,
+    );
   });
 });

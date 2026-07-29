@@ -5,6 +5,7 @@ import { Check, Play, Star } from "lucide-react";
 import { memo, useCallback, useRef, useState } from "react";
 
 import { blockSurface, readableInk, withAlpha } from "@/lib/colors";
+import { needsMicroStart } from "@/lib/postpone";
 import { fmtMin, snap, SLOT } from "@/lib/time";
 import type { Project, Task } from "@/lib/types";
 import { cn, clamp, haptic } from "@/lib/utils";
@@ -28,6 +29,7 @@ export const TaskBlock = memo(function TaskBlock({
   onOpen,
   onToggleDone,
   onStartFocus,
+  onMicroStart,
   onResize,
 }: {
   task: Task;
@@ -41,12 +43,14 @@ export const TaskBlock = memo(function TaskBlock({
   onOpen: (task: Task) => void;
   onToggleDone: (task: Task) => void;
   onStartFocus: (task: Task) => void;
+  onMicroStart: (task: Task) => void;
   onResize: (task: Task, estMinutes: number) => void;
 }) {
   // `blockSurface` e non `safeColor`: il titolo va sopra questo colore, e
   // una tinta di mezza luminanza non regge il testo in nessuna direzione.
   const color = blockSurface(project?.color ?? "");
   const done = task.status === "done";
+  const micro = !done && needsMicroStart(task);
 
   /*
    * Un blocco fatto si spegne cambiando **sfondo**, non opacità.
@@ -168,14 +172,28 @@ export const TaskBlock = memo(function TaskBlock({
       {/* Le azioni stanno sopra il pulsante di apertura, non dentro: un
           pulsante annidato in un altro non è un elemento valido. */}
       <div className="absolute right-1 top-1 flex items-center gap-0.5">
+        {/*
+          Su un task che ha già slittato due volte questo pulsante avvia
+          **dieci minuti**, non la sessione intera. Non è un pulsante in più —
+          sul calendario non c'è spazio per un terzo bersaglio, e uno da 24px
+          è già il minimo — è lo stesso pulsante che cambia significato dove
+          il significato deve cambiare: per quel task la sessione intera è
+          esattamente ciò che non è mai partito. L'etichetta lo dice, e la
+          sessione piena resta a un tocco di distanza nel pannello.
+        */}
         <button
           type="button"
           onPointerDown={(event) => event.stopPropagation()}
-          onClick={() => onStartFocus(task)}
-          aria-label={`Avvia il focus su «${task.title}»`}
-          className="flex size-6 items-center justify-center rounded-full bg-black/10 backdrop-blur-sm"
+          onClick={() => (micro ? onMicroStart(task) : onStartFocus(task))}
+          aria-label={
+            micro
+              ? `Comincia dieci minuti su «${task.title}»`
+              : `Avvia il focus su «${task.title}»`
+          }
+          title={micro ? "Solo 10 minuti" : "Avvia il focus"}
+          className="flex size-6 items-center justify-center rounded-full bg-black/10 text-[9px] font-semibold backdrop-blur-sm"
         >
-          <Play className="size-3 fill-current" />
+          {micro ? "10" : <Play className="size-3 fill-current" />}
         </button>
 
         <button

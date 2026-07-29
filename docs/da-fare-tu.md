@@ -76,108 +76,65 @@ guasto, è solo più lento.
 
 ## Passo 1.1 — Apri l'editor SQL
 
-Vai sul **link 1**. Si apre un foglio bianco con un pulsante verde **Run** in
-basso a destra. È una console: si scrive un comando, si preme Run, il database
-risponde.
+Vai sul **link 1**: si apre un foglio bianco con un pulsante verde **Run** in
+basso a destra. È una console — si incolla un comando, si preme Run, il
+database risponde.
 
 > Se chiede di accedere, entra con l'account con cui hai creato il progetto.
 > Se mostra una lista di progetti, scegli quello il cui riferimento contiene
 > `bgwrmxkgguzsngzgwjyu`.
+>
+> Se il foglio fa le bizze (testo che non si incolla, cursore impazzito),
+> ricarica la pagina con `F5` e ricomincia: non hai rotto niente, i comandi
+> vengono eseguiti solo quando premi Run.
 
-## Passo 1.2 — Incolla il primo blocco (migrazione 0002)
+## Passo 1.2 — Copia il file e incollalo, tutto insieme
 
-Seleziona tutto il testo qui sotto, dalla prima riga all'ultima, copialo,
-incollalo nel foglio bianco. Poi premi **Run**.
+C'è **un solo file** da incollare, che porta il database allo stato corretto
+qualunque sia il punto in cui si trova adesso:
 
-```sql
-alter table public.google_calendars
-  add column if not exists channel_id text,
-  add column if not exists channel_resource_id text,
-  add column if not exists channel_expires_at timestamptz;
+**https://github.com/alessiodo993/flusso-ai-new/blob/claude/flusso-rebuild-zero-fn19ua/supabase/setup-completo.sql**
 
-create index if not exists google_calendars_channel_expiry_idx
-  on public.google_calendars (channel_expires_at)
-  where channel_id is not null;
-```
+1. Apri quel link.
+2. In alto a destra del riquadro del codice c'è un'icona di **copia** (due
+   fogli sovrapposti), con la scritta *Copy raw file* al passaggio del mouse.
+   Premila: hai tutto negli appunti.
+3. Torna sull'editor SQL, `Ctrl+A` per selezionare quello che c'è, `Ctrl+V`
+   per sostituirlo.
+4. **Run**.
 
-**Cosa deve succedere:** in basso compare `Success. No rows returned`.
+Perché un file unico invece dei blocchi separati: **è ripetibile**. Ogni
+istruzione è scritta per non lamentarsi se il pezzo esiste già — le tabelle
+hanno `if not exists`, le policy e i trigger vengono buttati e rifatti, le
+funzioni sostituite. Quindi puoi incollarlo su un database vuoto, su uno a
+metà, o su uno già a posto, e il risultato è sempre lo stesso.
 
-Quel `if not exists` significa «se c'è già, lascia stare»: puoi premere Run
-due volte senza rompere niente. Vale per tutti i blocchi di questa guida, sono
-scritti per essere ripetibili.
+**Non cancella dati.** Non contiene un solo `drop table` né un `delete`: se hai
+già dei task dentro, li ritrovi. L'ho verificato eseguendolo tre volte di fila
+su un Postgres 16 con dei dati dentro, e i dati sono rimasti.
 
-## Passo 1.3 — Cancella e incolla il secondo blocco (migrazione 0003)
+## Passo 1.3 — Leggi le quattro righe del riepilogo
 
-Svuota il foglio (`Ctrl+A`, poi `Canc`), incolla questo, premi **Run**.
+Lo script finisce stampando una tabellina. È lì la verifica: non devi lanciare
+altre query.
 
-```sql
--- 1. Toglie ad anon i privilegi sulle tabelle che già esistono.
-revoke all privileges on all tables in schema public from anon;
-revoke all privileges on all sequences in schema public from anon;
-revoke all privileges on all routines in schema public from anon;
+| Controllo | Valore giusto |
+|---|---|
+| Tabelle create | **12** |
+| Tabelle leggibili da anonimi | **0** |
+| Colonne dei canali Google | **3** |
+| Trigger sulla registrazione | 1, oppure «assente — non grave» |
 
--- 2. E su quelle che verranno create in futuro.
-alter default privileges in schema public revoke all on tables from anon;
-alter default privileges in schema public revoke all on sequences from anon;
-alter default privileges in schema public revoke all on routines from anon;
+La riga che conta più di tutte è la seconda: `0` significa che il cancello del
+giardino è chiuso.
 
--- 3. I token di Google non devono essere leggibili nemmeno da te:
---    l'interfaccia usa una vista che mostra solo email e stato.
-revoke all privileges on public.google_accounts from authenticated;
+Sull'ultima: quel trigger crea la riga delle impostazioni quando ti registri.
+Su alcuni progetti Supabase non si riesce a installarlo, perché la tabella
+degli utenti appartiene al servizio di autenticazione. Non è un problema:
+l'app se ne accorge e crea la riga da sé al primo accesso.
 
--- 4. Riafferma i permessi che servono davvero all'utente collegato.
-grant select, insert, update, delete on
-  public.projects,
-  public.recurring,
-  public.ideas,
-  public.tasks,
-  public.focus_sessions,
-  public.daily_reviews,
-  public.okrs,
-  public.blocks,
-  public.google_calendars,
-  public.google_events,
-  public.user_settings
-to authenticated;
-
-grant select on public.google_accounts_public to authenticated;
-```
-
-**Cosa deve succedere:** ancora `Success. No rows returned`.
-
-Il punto 4 non è un ripensamento. Il punto 1 revoca **tutto**, e poi si
-riafferma esplicitamente ciò che l'utente collegato deve poter fare: elencare
-i permessi voluti è più sicuro che sperare che i default siano quelli giusti.
-
-## Passo 1.4 — Verifica che sia servito
-
-Svuota il foglio, incolla **questa** e premi Run:
-
-```sql
-select count(*) as tabelle_leggibili_da_anonimi
-from information_schema.role_table_grants
-where grantee = 'anon'
-  and table_schema = 'public'
-  and privilege_type = 'SELECT';
-```
-
-**Il risultato deve essere `0`.** Non 1, non 11: zero.
-
-Se leggi `0`, il cancello è chiuso. Se leggi un altro numero, la 0003 non è
-passata: rileggi l'eventuale messaggio rosso del passo 1.3 e riprova — capita
-di incollare solo metà del blocco.
-
-Seconda verifica, per la 0002:
-
-```sql
-select column_name
-from information_schema.columns
-where table_name = 'google_calendars'
-  and column_name like 'channel%';
-```
-
-Devi vedere **tre righe**: `channel_id`, `channel_resource_id`,
-`channel_expires_at`.
+Se una riga dice **ATTENZIONE**, scrivimi quale: significa che un pezzo non è
+passato, e il messaggio rosso dell'editor dice quale.
 
 ---
 

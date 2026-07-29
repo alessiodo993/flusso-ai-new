@@ -205,6 +205,7 @@ export function CalendarSection() {
             onOpenTask={setOpenTask}
             onToggleDone={actions.toggleDone}
             onStartFocus={actions.startFocus}
+            onMicroStart={actions.microStart}
             onResize={(task, estMinutes) =>
               update.mutate({ id: task.id, est_minutes: estMinutes })
             }

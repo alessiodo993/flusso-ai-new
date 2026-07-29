@@ -40,3 +40,28 @@ export function moveTask({
   }
   schedule({ id: task.id, day, startMinute });
 }
+
+/**
+ * Da quanti rinvii in poi si offre il micro-avvio.
+ *
+ * Due, non uno: il primo rinvio è vita normale — è arrivata una riunione, il
+ * treno era in ritardo. Dal secondo in poi il problema non è più l'agenda, è
+ * l'inizio; e a quel punto un permesso esplicito di fermarsi dopo dieci
+ * minuti vale più di qualunque promemoria.
+ */
+export const MICRO_START_FROM = 2;
+
+/**
+ * Vero se a questo task conviene offrire «Solo 10 minuti».
+ *
+ * Offrirlo su tutto lo svaluterebbe: su un task che parte volentieri non
+ * serve un permesso di fermarsi. Restano fuori anche i task già completati,
+ * per ovvie ragioni, e quelli archiviati.
+ */
+export function needsMicroStart(task: Task): boolean {
+  return (
+    task.status !== "done" &&
+    task.status_review !== "archived" &&
+    task.postpone_count >= MICRO_START_FROM
+  );
+}

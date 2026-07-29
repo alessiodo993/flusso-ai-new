@@ -1,11 +1,11 @@
 "use client";
 
-import { Scissors, Timer, Trash2 } from "lucide-react";
+import { Play, Scissors, Timer, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { ResponsiveSheet } from "@/components/shell/responsive-sheet";
 import { SelectField } from "@/components/ui/select-field";
-import { useFlussoEvent } from "@/lib/events";
+import { emit, useFlussoEvent } from "@/lib/events";
 import {
   useDeleteTasks,
   usePostponeTask,
@@ -161,6 +161,22 @@ export function PostponeDialog() {
             giorno. Ha bisogno di essere più piccolo, più corto, o di sparire.
           </p>
 
+          {/* Prima di tutto il resto: la via d'uscita che non è un rinvio.
+              Chi arriva qui stava rimandando, ed è il momento esatto in cui
+              «dieci minuti e poi smetti» ha la presa più forte. Non tocca il
+              contatore dei rinvii, perché il task non viene rinviato. */}
+          <Choice
+            Icon={Play}
+            title="Comincia adesso, dieci minuti"
+            detail="Poi puoi smettere. Di solito non si smette."
+            onSelect={() => {
+              const id = pending?.taskId;
+              done();
+              if (id) {
+                emit("flusso:focus-now", { taskId: id, micro: true, autoStart: true });
+              }
+            }}
+          />
           <Choice
             Icon={Scissors}
             title="Spezzalo in sottotask"

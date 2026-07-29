@@ -50,6 +50,7 @@ export function DayGrid({
   onOpenTask,
   onToggleDone,
   onStartFocus,
+  onMicroStart,
   onResize,
   onToggleGoogleDone,
 }: {
@@ -66,6 +67,7 @@ export function DayGrid({
   onOpenTask: (task: Task) => void;
   onToggleDone: (task: Task) => void;
   onStartFocus: (task: Task) => void;
+  onMicroStart: (task: Task) => void;
   onResize: (task: Task, estMinutes: number) => void;
   onToggleGoogleDone: (event: GoogleEvent) => void;
 }) {
@@ -239,6 +241,7 @@ export function DayGrid({
               onOpen={onOpenTask}
               onToggleDone={onToggleDone}
               onStartFocus={onStartFocus}
+              onMicroStart={onMicroStart}
               onResize={onResize}
             />
           ) : (

@@ -13,7 +13,8 @@
     "shots": "node scripts/screenshot.mjs",
     "a11y": "node scripts/a11y.mjs",
     "keyboard": "node scripts/keyboard.mjs",
-    "deploy": "bash scripts/deploy-vercel.sh"
+    "deploy": "bash scripts/deploy-vercel.sh",
+    "db:setup-check": "bash scripts/setup-sql-check.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",

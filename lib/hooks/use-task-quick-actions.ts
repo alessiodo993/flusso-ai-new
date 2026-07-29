@@ -5,6 +5,7 @@ import {
   Check,
   ListChecks,
   Play,
+  Timer,
   Star,
   StarOff,
   Trash2,
@@ -13,6 +14,7 @@ import { useCallback, useMemo } from "react";
 
 import type { MenuItem } from "@/components/ui/item-menu";
 import { emit } from "@/lib/events";
+import { needsMicroStart } from "@/lib/postpone";
 import {
   useDeleteTasks,
   useRestoreTasks,
@@ -92,6 +94,19 @@ export function useTaskQuickActions(options?: {
     emit("flusso:focus-now", { taskId: task.id, autoStart: false });
   }, []);
 
+  /**
+   * Il micro-avvio: timer ridotto, un solo sottotask davanti, e la promessa
+   * implicita che dopo dieci minuti si può smettere.
+   *
+   * Si offre **solo** ai task che hanno già slittato due volte, e non per
+   * pignoleria: proporlo su tutto lo svaluterebbe. Su un task che parte
+   * volentieri non serve un permesso di fermarsi; su uno che slitta da giorni
+   * quel permesso è l'unica cosa che lo fa cominciare.
+   */
+  const microStart = useCallback((task: Task) => {
+    emit("flusso:focus-now", { taskId: task.id, micro: true, autoStart: true });
+  }, []);
+
   /** Le stesse azioni come voci di menu, per tasto destro e action sheet. */
   const menuItems = useCallback(
     (task: Task): MenuItem[] => {
@@ -109,6 +124,15 @@ export function useTaskQuickActions(options?: {
           onSelect: () => startFocus(task),
         },
       ];
+
+      if (needsMicroStart(task)) {
+        items.push({
+          id: "micro",
+          label: "Solo 10 minuti",
+          Icon: Timer,
+          onSelect: () => microStart(task),
+        });
+      }
 
       if (options?.onSchedule) {
         items.push({
@@ -149,7 +173,15 @@ export function useTaskQuickActions(options?: {
 
       return items;
     },
-    [backToList, deleteTask, options, startFocus, toggleDone, toggleHighlight],
+    [
+      backToList,
+      deleteTask,
+      microStart,
+      options,
+      startFocus,
+      toggleDone,
+      toggleHighlight,
+    ],
   );
 
   return useMemo(
@@ -160,6 +192,7 @@ export function useTaskQuickActions(options?: {
       scheduleQuick,
       backToList,
       startFocus,
+      microStart,
       menuItems,
       openTask: options?.onOpen,
       /** Domani, per le scorciatoie di rinvio. */
@@ -169,6 +202,7 @@ export function useTaskQuickActions(options?: {
       backToList,
       deleteTask,
       menuItems,
+      microStart,
       options?.onOpen,
       scheduleQuick,
       startFocus,

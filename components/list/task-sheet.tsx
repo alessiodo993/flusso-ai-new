@@ -1,6 +1,14 @@
 "use client";
 
-import { CalendarClock, Check, ListChecks, Play, Star, Trash2 } from "lucide-react";
+import {
+  CalendarClock,
+  Check,
+  ListChecks,
+  Play,
+  Star,
+  Timer,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { SubtaskList } from "@/components/list/subtask-list";
@@ -10,6 +18,7 @@ import { SelectField } from "@/components/ui/select-field";
 import { useProjects } from "@/lib/hooks/use-projects";
 import { useTaskQuickActions } from "@/lib/hooks/use-task-quick-actions";
 import { useUpdateTask } from "@/lib/hooks/use-tasks";
+import { needsMicroStart } from "@/lib/postpone";
 import { fmtDuration } from "@/lib/time";
 import {
   ENERGIES,
@@ -113,6 +122,23 @@ export function TaskSheet({
             <Play className="size-4" />
             Avvia focus
           </button>
+
+          {/* Su un task che slitta da due volte, «dieci minuti» è la porta
+              che si apre: il pulsante grande resta l'avvio normale, ma questo
+              sta accanto e non sotto un menù. */}
+          {needsMicroStart(task) && (
+            <button
+              type="button"
+              className="btn btn-soft"
+              onClick={() => {
+                actions.microStart(task);
+                onOpenChange(false);
+              }}
+            >
+              <Timer className="size-4" />
+              Solo 10 minuti
+            </button>
+          )}
 
           <button
             type="button"
