@@ -10,7 +10,7 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 | 3 | Tipi, client Supabase, hook CRUD base | ✅ fatto |
 | 4 | Shell `/app` | ✅ fatto |
 | 5 | Idee, Lista, TaskCard, TaskSheet | ✅ fatto |
-| 6 | Calendario giorno | ⏳ |
+| 6 | Calendario giorno | ✅ fatto |
 | 7 | Google Calendar | ⏳ |
 | 8 | Focus Mode | ⏳ |
 | 9 | Calibrazione, rinvii, decay, Highlight | ⏳ |
@@ -331,3 +331,70 @@ colonne, la BottomNav e il FAB sono stati controllati così. La pagina
   passo 6, insieme alla griglia che fa da bersaglio.
 - La bacchetta AI emette già il suo evento ma la cattura magica vera è al
   passo 10.
+
+---
+
+## Passo 6 — Calendario giorno
+
+### Fatto
+
+**Griglia**
+- `DayStrip` sticky con i sette giorni, navigazione di settimana, puntino sui
+  giorni che hanno qualcosa e ritorno rapido a oggi.
+- **Zoom 15 / 30 / 60**, default 30 su desktop e 60 su telefono, con
+  l'etichetta `min` sempre leggibile: i tre numeri da soli non direbbero cosa
+  stanno regolando.
+- Rendering nelle convenzioni di Google Calendar — ore piene continue,
+  suddivisioni tratteggiate, **riga rossa dell'ora corrente** — ma disegnato
+  con i token di Flusso: blocchi a colore pieno del progetto e testo scelto
+  per contrasto (`readableInk`), non fisso.
+- Fuori dall'orario di lavoro lo sfondo si incupisce; la finestra visibile si
+  **allarga da sé** per far entrare un blocco pianificato prima o dopo, così
+  niente sparisce solo perché la giornata è impostata più stretta.
+- Chip del tempo pianificato, che passa in ambra oltre il tetto giornaliero.
+
+**Blocchi**
+- Titolo, orario, stella dell'highlight, **checkbox Fatto** e **▶ Avvia focus**
+  direttamente sul blocco.
+- **Ridimensionamento** dal bordo inferiore con passo di 15 minuti, maniglia
+  alta abbastanza da prendersi col pollice, anteprima dal vivo mentre si tira,
+  e frecce su/giù da tastiera (`role="slider"` con i valori dichiarati).
+- I blocchi sovrapposti si dividono la larghezza come su Google Calendar.
+- **Buffer** reso come spazio dedicato e marcato, non come vuoto anonimo.
+
+**Trascinamento**
+- **Un solo `DndContext`, nella shell.** È l'unico modo perché un'idea presa
+  nella colonna di sinistra possa essere lasciata sul calendario a destra: due
+  contesti separati non si vedono fra loro.
+- Da Idee → slot (l'idea diventa un blocco pianificato), da Lista → slot,
+  da slot → slot. Riordino di Idee nello stesso contesto.
+- `activationConstraint` con **delay 220ms su touch**, altrimenti ogni
+  scorrimento diventerebbe un trascinamento.
+- `DragOverlay` con **chip dell'orario di destinazione aggiornata dal vivo** e
+  vibrazione su presa e rilascio.
+- Gli id dei trascinabili sono quelli delle righe, **mai l'indice di un array
+  filtrato**: ordinamenti e filtri attivi non rompono il gesto.
+
+**Verifica**
+- `lib/calendar-layout.ts` — disposizione delle colonne, strisce di buffer e
+  finestra visibile sono funzioni pure con **21 test**: un blocco sovrapposto
+  che scompare sotto un altro non produce nessun errore, solo un'ora di lavoro
+  che sparisce dalla vista. In tutto **106 test**.
+- Trascinamento provato davvero con un browser: presa dalla Lista, chip che
+  mostra `11:45` durante il movimento, blocco che compare all'istante al
+  rilascio, e — non essendoci un Supabase vero — rollback con toast d'errore.
+  Il ciclo ottimistico completo, verificato dall'esterno.
+
+### Scelte da segnalare
+- **Gli slot di rilascio sono sempre da 15 minuti**, qualunque sia lo zoom: la
+  precisione del gesto non deve cambiare a seconda di come si sta guardando.
+- **`id="flusso"` sul `DndContext`**: senza, dnd-kit numera gli
+  `aria-describedby` con un contatore di modulo che sul server e nel browser
+  parte da valori diversi, e l'idratazione fallisce su *ogni* elemento
+  trascinabile. Errore trovato con lo screenshot, non a occhio.
+- Il ridimensionamento **disabilita il trascinamento** finché è in corso:
+  tirare il bordo non deve staccare il blocco dalla griglia.
+
+### Resta da fare
+- Gli eventi Google come ostacoli e il loro rendering distinto: passo 7.
+- La vista Settimana: passo 12.

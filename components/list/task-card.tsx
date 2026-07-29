@@ -1,6 +1,7 @@
 "use client";
 
-import { CalendarPlus, Star, Trash2 } from "lucide-react";
+import { useDraggable } from "@dnd-kit/core";
+import { CalendarPlus, GripVertical, Star, Trash2 } from "lucide-react";
 import { memo, useCallback, useState } from "react";
 
 import { TaskMetaChips } from "@/components/shared/task-meta-chips";
@@ -52,6 +53,14 @@ export const TaskCard = memo(function TaskCard({
   const [editing, setEditing] = useState(false);
   const done = task.status === "done";
 
+  // Trascinabile fin da qui, così un task può finire direttamente su uno slot
+  // del calendario. L'id è quello della riga, mai l'indice dell'array:
+  // altrimenti cambiare ordinamento o filtro romperebbe il trascinamento.
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: task.id,
+    data: { kind: "task", task },
+  });
+
   const openSheet = useCallback(() => {
     if (selectionActive) onToggleSelect(task.id);
     else onOpen(task);
@@ -63,15 +72,31 @@ export const TaskCard = memo(function TaskCard({
   );
 
   return (
-    <li className="border-b border-line last:border-b-0">
+    <li
+      ref={setNodeRef}
+      className={cn(
+        "border-b border-line last:border-b-0",
+        isDragging && "opacity-40",
+      )}
+    >
       <ItemMenu
         items={menuItems}
         title={task.title}
         className={cn(
-          "flex items-start gap-2 py-1.5 pr-2 transition-colors duration-150 ease-out",
+          "flex items-start gap-1 py-1.5 pr-2 transition-colors duration-150 ease-out",
           selected && "bg-accent-soft",
         )}
       >
+        <button
+          type="button"
+          className="icon-btn icon-btn-sm mt-1.5 shrink-0 cursor-grab touch-none text-ink-faint active:cursor-grabbing"
+          aria-label={`Trascina «${task.title}» sul calendario`}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4" />
+        </button>
+
         {/* La barra del colore del progetto, a filo del bordo sinistro. */}
         <span
           aria-hidden="true"

@@ -128,18 +128,31 @@ export function useRestoreIdeas() {
   });
 }
 
+/** Dove finiscono le idee promosse: in Lista, oppure già su uno slot. */
+export type PromoteTarget = {
+  day?: string | null;
+  startMinute?: number | null;
+  estMinutes?: number | null;
+};
+
 /**
- * Promuove delle idee a task: le crea in Lista e le toglie da Idee.
+ * Promuove delle idee a task: le crea in Lista e le toglie da Idee. Se arriva
+ * anche una destinazione, il task nasce già sul calendario — è quello che
+ * succede trascinando un'idea su uno slot.
  *
  * Restituisce i task creati perché chi chiama possa offrire l'annullamento,
  * che deve saper cancellare esattamente quelli.
  */
 export function usePromoteIdeas() {
-  return useOptimisticMutation<{ ideas: Idea[] }, Task[], Idea[]>({
+  return useOptimisticMutation<
+    { ideas: Idea[] } & PromoteTarget,
+    Task[],
+    Idea[]
+  >({
     key: qk.ideas,
     alsoInvalidate: [qk.tasks],
     errorMessage: "Non è stato possibile promuovere.",
-    async mutationFn({ ideas }) {
+    async mutationFn({ ideas, day, startMinute, estMinutes }) {
       const supabase = supabaseBrowser();
 
       const { data, error } = await supabase
@@ -148,6 +161,10 @@ export function usePromoteIdeas() {
           ideas.map((idea) => ({
             title: idea.title,
             project_id: idea.project_id,
+            day: day ?? null,
+            start_minute: day ? (startMinute ?? null) : null,
+            // Un blocco senza durata il database non lo accetta.
+            est_minutes: day ? (estMinutes ?? 30) : null,
           })),
         )
         .select();

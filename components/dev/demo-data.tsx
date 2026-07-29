@@ -80,6 +80,49 @@ export function DemoData({ children }: { children: React.ReactNode }) {
         project_id: "p3",
         status: "done",
       }),
+
+      // Giornata di oggi: un highlight, un blocco col buffer subito dopo,
+      // due sovrapposti e uno già chiuso.
+      task("t8", {
+        title: "Deep work sul capitolo 3",
+        project_id: "p1",
+        day: today,
+        start_minute: 540,
+        est_minutes: 90,
+        energy: "alta",
+        is_daily_highlight: true,
+        highlight_date: today,
+      }),
+      task("t9", {
+        title: "Revisione delle note",
+        project_id: "p1",
+        day: today,
+        start_minute: 640,
+        est_minutes: 30,
+      }),
+      task("t10", {
+        title: "Chiamata con il team",
+        project_id: "p2",
+        day: today,
+        start_minute: 720,
+        est_minutes: 60,
+      }),
+      task("t11", {
+        title: "Preparare la demo",
+        project_id: "p2",
+        day: today,
+        start_minute: 750,
+        est_minutes: 60,
+        energy: "media",
+      }),
+      task("t12", {
+        title: "Spesa",
+        project_id: "p3",
+        day: today,
+        start_minute: 1020,
+        est_minutes: 45,
+        status: "done",
+      }),
     ];
 
     const ideas: Idea[] = [
