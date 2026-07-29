@@ -7,7 +7,7 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 |---|---|---|
 | 1 | Scaffold, token CSS, Supabase Auth, middleware, login | ✅ fatto |
 | 2 | Migrazione DB completa (RLS, GRANT, trigger) | ✅ fatto |
-| 3 | Tipi, client Supabase, hook CRUD base | ⏳ |
+| 3 | Tipi, client Supabase, hook CRUD base | ✅ fatto |
 | 4 | Shell `/app` | ⏳ |
 | 5 | Idee, Lista, TaskCard, TaskSheet | ⏳ |
 | 6 | Calendario giorno | ⏳ |
@@ -148,3 +148,62 @@ PostgreSQL senza dipendere dal cloud.
 - Applicare la migrazione al progetto Supabase reale (va lanciata a mano dal
   SQL editor o con la CLI: qui non ci sono credenziali).
 - Tipi TypeScript allineati e client tipizzati: passo 3.
+
+---
+
+## Passo 3 — Tipi, client tipizzati, hook dati
+
+### Fatto
+
+**Tipi**
+- `lib/supabase/database.types.ts`: lo schema in TypeScript, allineato a mano
+  alla migrazione (normalmente lo genera `supabase gen types`, che qui non ha
+  credenziali). Va rigenerato a ogni migrazione futura.
+- `lib/types.ts`: i tipi di dominio. Il database restituisce `text` dove noi
+  vogliamo unioni e `Json` dove vogliamo una forma precisa, quindi la
+  restrizione avviene **una volta sola, all'ingresso** — `toTask`, `toOkr`,
+  `toRecurring`, `toFocusSession`, `toDailyReview`. Da lì in poi il resto
+  dell'app non deve più dubitarne.
+- `parseSubtasks` e `parseKeyResults` sono difensivi: una voce malformata
+  viene scartata, una parziale completata. Un record storto non deve poter
+  far sparire una lista.
+- Predicati di dominio condivisi: `isScheduled`, `taskEnd`, `subtaskProgress`,
+  `keyResultProgress`, `leastAdvancedKeyResult`, `keyResultStep`.
+
+**Client**
+- Browser, server e admin ora sono tipizzati su `Database`.
+
+**Livello dati**
+- `lib/hooks/query-keys.ts`: tutte le chiavi in un posto solo, perché le
+  invalidazioni siano mirate e verificabili a colpo d'occhio.
+- `lib/hooks/use-optimistic.ts`: il ciclo ottimistico scritto una volta sola —
+  `cancelQueries`, snapshot, aggiornamento immediato, **rollback** e toast in
+  caso di errore, invalidazione mirata alla fine. Gli hook non possono
+  dimenticarsi il rollback perché non lo scrivono.
+- `lib/db-errors.ts`: i vincoli e i codici Postgres tradotti in frasi che
+  dicono cosa fare. I messaggi dei trigger sono già in italiano e passano così.
+- `lib/sort-order.ts`: ordinamento manuale con chiavi frazionarie, così
+  trascinare riscrive **una sola riga**. Include il riconoscimento del caso
+  degenerato (`needsRebalance`) e la ridistribuzione.
+- Hook per dominio: `useProjects`, `useIdeas`, `useTasks`, `useSettings`, con
+  creazione, modifica, eliminazione, riordino, azioni in blocco,
+  pianificazione, rinvio con conteggio e highlight.
+- **71 test** in tutto (`time`, `sort-order`, `types`).
+
+### Scelte da segnalare
+- **`useTasks` carica una finestra, non tutto**: tutti i task ancora aperti più
+  i chiusi degli ultimi 30 giorni. Senza questa finestra ogni avvio
+  scaricherebbe anni di storia per mostrare una giornata; la calibrazione e i
+  grafici useranno query aggregate proprie.
+- **`useSetHighlight` prima toglie e poi assegna**: l'indice unico del database
+  rifiuterebbe un secondo highlight, quindi la mutazione libera il giorno prima
+  di scrivere. Anche l'aggiornamento ottimistico toglie la stella all'altro
+  task, altrimenti per un istante se ne vedrebbero due.
+- **`useScheduleTask` mette una stima di default** quando il task non ne ha:
+  il database non accetta un blocco senza durata, e chiedere la stima proprio
+  mentre si trascina spezzerebbe il gesto.
+- **`useSettings` crea la riga se manca**, invece di lasciare l'app senza
+  impostazioni: serve agli account nati prima del trigger.
+
+### Resta da fare
+- La shell `/app` che userà questi hook: passo 4.

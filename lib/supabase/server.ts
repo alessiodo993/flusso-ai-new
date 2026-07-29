@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
+import type { Database } from "@/lib/supabase/database.types";
 
 /**
  * Client Supabase per Server Components e Route Handlers: legge la sessione
@@ -10,7 +11,7 @@ import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
 export async function supabaseServer() {
   const cookieStore = await cookies();
 
-  return createServerClient(supabaseUrl(), supabaseAnonKey(), {
+  return createServerClient<Database>(supabaseUrl(), supabaseAnonKey(), {
     cookies: {
       getAll() {
         return cookieStore.getAll();

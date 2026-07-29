@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
 import { supabaseServiceRoleKey, supabaseUrl } from "@/lib/env";
+import type { Database } from "@/lib/supabase/database.types";
 
 /**
  * Client con chiave di servizio: scavalca le RLS.
@@ -13,7 +14,7 @@ import { supabaseServiceRoleKey, supabaseUrl } from "@/lib/env";
  * per `user_id` è un invito a dimenticarselo.
  */
 export function supabaseAdmin() {
-  return createClient(supabaseUrl(), supabaseServiceRoleKey(), {
+  return createClient<Database>(supabaseUrl(), supabaseServiceRoleKey(), {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }
