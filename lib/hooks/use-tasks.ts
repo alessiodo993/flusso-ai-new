@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import { pushTaskToGoogle } from "@/lib/google/push-client";
 import { qk } from "@/lib/hooks/query-keys";
 import {
   removeByIds,
@@ -207,6 +208,12 @@ export function useUpdateTask() {
   >({
     key: qk.tasks,
     errorMessage: "Non è stato possibile aggiornare il task.",
+    /*
+     * Anche le modifiche "normali" possono toccare il calendario: cambiare
+     * titolo, durata o stato di un blocco pianificato deve vedersi su Google.
+     * La rotta ignora da sé i task che non sono pianificati.
+     */
+    onSuccess: (task) => pushTaskToGoogle(task.id),
     async mutationFn({ id, ...changes }) {
       const { data, error } = await supabaseBrowser()
         .from("tasks")
@@ -228,6 +235,12 @@ export function useDeleteTasks() {
   return useOptimisticMutation<{ ids: string[] }, void, Task[]>({
     key: qk.tasks,
     errorMessage: "Non è stato possibile eliminare.",
+    /*
+     * Anche l'eliminazione va riflessa: la rotta, non trovando più il task,
+     * cancella l'evento corrispondente. Un blocco cancellato qui che resta sul
+     * calendario Google è peggio di non averlo mai sincronizzato.
+     */
+    onSuccess: (_result, { ids }) => ids.forEach(pushTaskToGoogle),
     async mutationFn({ ids }) {
       const { error } = await supabaseBrowser()
         .from("tasks")
@@ -315,6 +328,8 @@ export function useScheduleTask() {
   >({
     key: qk.tasks,
     errorMessage: "Non è stato possibile pianificare il task.",
+    // Il blocco appena messo sul calendario va riflesso anche su Google.
+    onSuccess: (task) => pushTaskToGoogle(task.id),
     async mutationFn({ id, day, startMinute, estMinutes }) {
       const supabase = supabaseBrowser();
       let duration = estMinutes ?? null;
@@ -360,6 +375,8 @@ export function useUnscheduleTask() {
   return useOptimisticMutation<{ id: string }, Task, Task[]>({
     key: qk.tasks,
     errorMessage: "Non è stato possibile riportare il task in Lista.",
+    // Tolto dal calendario qui, va tolto anche di là.
+    onSuccess: (task) => pushTaskToGoogle(task.id),
     async mutationFn({ id }) {
       const { data, error } = await supabaseBrowser()
         .from("tasks")
@@ -394,6 +411,7 @@ export function usePostponeTask() {
   >({
     key: qk.tasks,
     errorMessage: "Non è stato possibile rinviare il task.",
+    onSuccess: (task) => pushTaskToGoogle(task.id),
     async mutationFn({ id, day, startMinute }) {
       const supabase = supabaseBrowser();
       const { data: existing, error: readError } = await supabase

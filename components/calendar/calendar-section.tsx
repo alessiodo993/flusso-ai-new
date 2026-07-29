@@ -5,12 +5,19 @@ import { useMemo, useState } from "react";
 
 import { DayGrid } from "@/components/calendar/day-grid";
 import { DayStrip } from "@/components/calendar/day-strip";
+import { AllDayStrip } from "@/components/calendar/google-event-block";
+import { GoogleReconnectBanner } from "@/components/calendar/google-reconnect-banner";
 import { ScheduleSheet } from "@/components/list/schedule-sheet";
 import { TaskSheet } from "@/components/list/task-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ZOOMS, type Zoom } from "@/lib/calendar-layout";
 import { emit } from "@/lib/events";
 import { useBlocks } from "@/lib/hooks/use-blocks";
+import {
+  useGoogleCalendars,
+  useGoogleEvents,
+  useToggleGoogleEventDone,
+} from "@/lib/hooks/use-google";
 import { useIsDesktop } from "@/lib/hooks/use-media-query";
 import { useProjects } from "@/lib/hooks/use-projects";
 import { useSettings } from "@/lib/hooks/use-settings";
@@ -36,6 +43,9 @@ export function CalendarSection() {
   const { byDay } = useTasks();
   const { byId: projectsById } = useProjects();
   const { forDay } = useBlocks();
+  const { byDay: googleByDay } = useGoogleEvents();
+  const { byId: calendarsById } = useGoogleCalendars();
+  const toggleGoogleDone = useToggleGoogleEventDone();
   const update = useUpdateTask();
   const schedule = useScheduleTask();
   const actions = useTaskQuickActions({
@@ -50,6 +60,15 @@ export function CalendarSection() {
   const dayTasks = useMemo(() => byDay.get(day) ?? [], [byDay, day]);
   const scheduled = useMemo(() => dayTasks.filter(isScheduled), [dayTasks]);
   const fixed = useMemo(() => forDay(day), [forDay, day]);
+
+  const googleEvents = useMemo(
+    () => googleByDay.get(day) ?? [],
+    [googleByDay, day],
+  );
+  const allDayEvents = useMemo(
+    () => googleEvents.filter((event) => event.all_day),
+    [googleEvents],
+  );
 
   const counts = useMemo(() => {
     const map = new Map<DayISO, number>();
@@ -111,7 +130,9 @@ export function CalendarSection() {
         </div>
       </div>
 
-      {scheduled.length === 0 && fixed.length === 0 ? (
+      <GoogleReconnectBanner />
+
+      {scheduled.length === 0 && fixed.length === 0 && googleEvents.length === 0 ? (
         <EmptyState
           Icon={CalendarDays}
           title="Giornata libera"
@@ -129,11 +150,21 @@ export function CalendarSection() {
         />
       ) : (
         <div className="p-3">
+          <AllDayStrip
+            events={allDayEvents}
+            calendars={calendarsById}
+            onToggleDone={(event) =>
+              toggleGoogleDone.mutate({ id: event.id, done: !event.local_done })
+            }
+          />
+
           <DayGrid
             day={day}
             zoom={effectiveZoom}
             tasks={dayTasks}
             fixed={fixed}
+            googleEvents={googleEvents}
+            googleCalendars={calendarsById}
             projectsById={projectsById}
             bufferMinutes={settings.buffer_minutes}
             workStart={settings.work_start}
@@ -143,6 +174,9 @@ export function CalendarSection() {
             onStartFocus={actions.startFocus}
             onResize={(task, estMinutes) =>
               update.mutate({ id: task.id, est_minutes: estMinutes })
+            }
+            onToggleGoogleDone={(event) =>
+              toggleGoogleDone.mutate({ id: event.id, done: !event.local_done })
             }
           />
         </div>

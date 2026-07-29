@@ -313,6 +313,9 @@ export type Database = {
           sync_token: string | null;
           last_synced_at: string | null;
           created_at: string;
+          channel_id: string | null;
+          channel_resource_id: string | null;
+          channel_expires_at: string | null;
         };
         Insert: {
           id?: string;
@@ -326,6 +329,9 @@ export type Database = {
           sync_token?: string | null;
           last_synced_at?: string | null;
           created_at?: string;
+          channel_id?: string | null;
+          channel_resource_id?: string | null;
+          channel_expires_at?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["google_calendars"]["Insert"]

@@ -3,6 +3,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { useEffect, useState } from "react";
 
+import { GoogleEventBlock } from "@/components/calendar/google-event-block";
 import { TaskBlock } from "@/components/calendar/task-block";
 import {
   bufferStrips,
@@ -12,10 +13,22 @@ import {
   type Zoom,
 } from "@/lib/calendar-layout";
 import { fmtMin, nowMinutes, SLOT, todayISO, type DayISO } from "@/lib/time";
-import { isScheduled, type FixedBlock, type Project, type Task } from "@/lib/types";
+import {
+  isScheduled,
+  type FixedBlock,
+  type GoogleCalendar,
+  type GoogleEvent,
+  type Project,
+  type Task,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const GUTTER = "3.25rem";
+
+/** Sulla griglia convivono blocchi di Flusso ed eventi Google. */
+type Entry =
+  | { kind: "task"; task: Task }
+  | { kind: "google"; event: GoogleEvent };
 
 /**
  * La griglia di una giornata. Le ore sono righe piene, le mezz'ore tratteggiate
@@ -28,6 +41,8 @@ export function DayGrid({
   zoom,
   tasks,
   fixed,
+  googleEvents,
+  googleCalendars,
   projectsById,
   bufferMinutes,
   workStart,
@@ -36,11 +51,14 @@ export function DayGrid({
   onToggleDone,
   onStartFocus,
   onResize,
+  onToggleGoogleDone,
 }: {
   day: DayISO;
   zoom: Zoom;
   tasks: Task[];
   fixed: FixedBlock[];
+  googleEvents: GoogleEvent[];
+  googleCalendars: Map<string, GoogleCalendar>;
   projectsById: Map<string, Project>;
   bufferMinutes: number;
   workStart: number;
@@ -49,41 +67,56 @@ export function DayGrid({
   onToggleDone: (task: Task) => void;
   onStartFocus: (task: Task) => void;
   onResize: (task: Task, estMinutes: number) => void;
+  onToggleGoogleDone: (event: GoogleEvent) => void;
 }) {
   const px = pxFor(zoom);
   const scheduled = tasks.filter(isScheduled);
+  // Gli *all day* non entrano nella griglia: hanno la loro striscia sopra.
+  const timedEvents = googleEvents.filter((event) => !event.all_day);
 
-  const ranges = [
-    ...scheduled.map((task) => ({
-      start: task.start_minute,
-      end: task.start_minute + task.est_minutes,
-    })),
-    ...fixed.map((block) => ({
-      start: block.start_minute,
-      end: block.end_minute,
-    })),
-  ];
+  const taskRanges = scheduled.map((task) => ({
+    start: task.start_minute,
+    end: task.start_minute + task.est_minutes,
+  }));
 
   // Non si chiama `window`: quel nome è già del browser, e oscurarlo qui
   // renderebbe irraggiungibile `setInterval` più sotto.
-  const view = visibleWindow({ workStart, workEnd, ranges });
+  const view = visibleWindow({
+    workStart,
+    workEnd,
+    ranges: [
+      ...taskRanges,
+      ...fixed.map((block) => ({
+        start: block.start_minute,
+        end: block.end_minute,
+      })),
+      ...timedEvents.map((event) => ({
+        start: event.start_minute,
+        end: event.end_minute,
+      })),
+    ],
+  });
   const height = (view.end - view.start) * px;
 
-  const placed = layoutOverlaps(
-    scheduled.map((task) => ({
-      item: task,
+  /*
+   * Task ed eventi si dispongono **insieme**: un blocco di lavoro e una
+   * riunione alla stessa ora devono stare affiancati, non uno sopra l'altro.
+   * Calcolarli separatamente li farebbe sovrapporre, nascondendo il primo.
+   */
+  const placed = layoutOverlaps<Entry>([
+    ...scheduled.map((task) => ({
+      item: { kind: "task" as const, task },
       start: task.start_minute,
       end: task.start_minute + task.est_minutes,
     })),
-  );
+    ...timedEvents.map((event) => ({
+      item: { kind: "google" as const, event },
+      start: event.start_minute,
+      end: event.end_minute,
+    })),
+  ]);
 
-  const buffers = bufferStrips(
-    scheduled.map((task) => ({
-      start: task.start_minute,
-      end: task.start_minute + task.est_minutes,
-    })),
-    bufferMinutes,
-  );
+  const buffers = bufferStrips(taskRanges, bufferMinutes);
 
   const hours: number[] = [];
   for (let m = view.start; m <= view.end; m += 60) hours.push(m);
@@ -188,26 +221,39 @@ export function DayGrid({
           />
         ))}
 
-        {placed.map((entry) => (
-          <TaskBlock
-            key={entry.item.id}
-            task={entry.item}
-            project={
-              entry.item.project_id
-                ? projectsById.get(entry.item.project_id)
-                : undefined
-            }
-            top={(entry.start - view.start) * px}
-            height={(entry.end - entry.start) * px}
-            left={(entry.column / entry.columns) * 100}
-            width={100 / entry.columns}
-            pxPerMinute={px}
-            onOpen={onOpenTask}
-            onToggleDone={onToggleDone}
-            onStartFocus={onStartFocus}
-            onResize={onResize}
-          />
-        ))}
+        {placed.map((entry) =>
+          entry.item.kind === "task" ? (
+            <TaskBlock
+              key={entry.item.task.id}
+              task={entry.item.task}
+              project={
+                entry.item.task.project_id
+                  ? projectsById.get(entry.item.task.project_id)
+                  : undefined
+              }
+              top={(entry.start - view.start) * px}
+              height={(entry.end - entry.start) * px}
+              left={(entry.column / entry.columns) * 100}
+              width={100 / entry.columns}
+              pxPerMinute={px}
+              onOpen={onOpenTask}
+              onToggleDone={onToggleDone}
+              onStartFocus={onStartFocus}
+              onResize={onResize}
+            />
+          ) : (
+            <GoogleEventBlock
+              key={entry.item.event.id}
+              event={entry.item.event}
+              calendar={googleCalendars.get(entry.item.event.calendar_id)}
+              top={(entry.start - view.start) * px}
+              height={(entry.end - entry.start) * px}
+              left={(entry.column / entry.columns) * 100}
+              width={100 / entry.columns}
+              onToggleDone={onToggleGoogleDone}
+            />
+          ),
+        )}
 
         <NowLine day={day} range={view} px={px} />
       </div>

@@ -79,9 +79,11 @@ function redirectKeepingCookies(to: URL, from: NextResponse): NextResponse {
 export const config = {
   matcher: [
     /*
-     * Tutto tranne asset statici e immagini: il refresh della sessione non
-     * ha senso su un font, e ogni passaggio in più costa latenza.
+     * Tutto tranne asset statici, immagini e le rotte pubbliche: il refresh
+     * della sessione non ha senso su un font, e ogni passaggio in più costa
+     * latenza. `api/public` è escluso perché lo chiama Google, non il browser:
+     * lì non c'è alcun cookie da rinnovare.
      */
-    "/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    "/((?!api/public|_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };

@@ -11,7 +11,7 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 | 4 | Shell `/app` | ✅ fatto |
 | 5 | Idee, Lista, TaskCard, TaskSheet | ✅ fatto |
 | 6 | Calendario giorno | ✅ fatto |
-| 7 | Google Calendar | ⏳ |
+| 7 | Google Calendar | ✅ fatto |
 | 8 | Focus Mode | ⏳ |
 | 9 | Calibrazione, rinvii, decay, Highlight | ⏳ |
 | 10 | AI (cattura, planner, OKR) | ⏳ |
@@ -398,3 +398,103 @@ colonne, la BottomNav e il FAB sono stati controllati così. La pagina
 ### Resta da fare
 - Gli eventi Google come ostacoli e il loro rendering distinto: passo 7.
 - La vista Settimana: passo 12.
+
+---
+
+## Passo 7 — Google Calendar
+
+### Fatto
+
+**Token e sicurezza**
+- `lib/google/crypto.ts`: AES-256-**GCM**, non CBC. GCM autentica il testo
+  cifrato, quindi un token manomesso viene **rifiutato** invece di decifrarsi
+  in spazzatura. Formato `iv|tag|ciphertext` in una sola colonna — tre colonne
+  separate prima o poi finirebbero disallineate. **13 test**, compresi
+  manomissione, chiave sbagliata e chiave assente.
+- I token restano irraggiungibili dal browser: `google_accounts` non ha alcun
+  `GRANT` per `authenticated`, e l'interfaccia legge stato ed email dalla vista
+  `google_accounts_public`.
+- Lo `state` di OAuth vive in un cookie `httpOnly` e viene confrontato al
+  ritorno: è ciò che impedisce a un link esterno di far collegare a Flusso un
+  account Google che non è quello dell'utente.
+
+**Multi-account**
+- `?aggiungi=1` riavvia il consenso con `select_account consent`, così si
+  collegano più account (personale e lavoro).
+- `access_type=offline` **e** `prompt=consent`: senza il primo Google non
+  rilascia il refresh token, senza il secondo non lo rilascia *di nuovo* a chi
+  ha già dato il consenso — e la sincronizzazione morirebbe dopo un'ora, senza
+  spiegazioni.
+- Rinnovo automatico un minuto prima della scadenza. Su `invalid_grant` si
+  imposta `needs_reconnect` e compare il banner **«Riconnetti {email}»**:
+  senza, l'utente scoprirebbe il problema solo accorgendosi che il calendario
+  è fermo da giorni.
+- Lo scope dipende dalle preferenze: chi tiene la scrittura spenta dà solo
+  `calendar.readonly`.
+
+**Sincronizzazione in entrata**
+- Incrementale con `syncToken`; su **`410 Gone`** si azzera il token e si rifà
+  una sincronizzazione completa, in automatico.
+- `lib/google/events.ts` converte gli eventi nel modello di Flusso, ed è il
+  punto in cui si perdono le cose: **19 test** su ora legale e solare, offset
+  espliciti, eventi che attraversano la mezzanotte, trasferte di più giorni,
+  *all day* con la data di fine esclusa, eventi annullati.
+- I calendari si sincronizzano **in sequenza**: sei richieste in parallelo si
+  prendono un 403 a testa invece di sincronizzarsi.
+- Gli errori tornano **per calendario**: se un account va ricollegato, gli
+  altri si aggiornano lo stesso.
+- Polling ogni 5 minuti in primo piano, **fermo a scheda nascosta** e con un
+  recupero immediato al ritorno.
+
+**Notifiche push** (migrazione `0002`)
+- `events.watch` verso `/api/public/google/webhook`, con token di canale
+  firmato in HMAC e verificato **a tempo costante**: un `===` lascerebbe
+  indovinare la firma misurando i tempi di risposta. **8 test**, incluso il
+  caso che conta — prendere un token valido e cambiarci l'utente.
+- Canali rinnovati con un giorno di anticipo e aperti solo su HTTPS: da
+  localhost Google non potrebbe consegnare nulla, quindi non ci si prova
+  nemmeno. Se il canale non si apre, il polling copre il caso.
+
+**Sincronizzazione in uscita**
+- **Idempotente**: si cerca prima l'evento per
+  `extendedProperties.private.flussoTaskId`, e solo se non esiste lo si crea.
+  Fidarsi del solo `google_event_id` non basterebbe: una scrittura andata a
+  metà lascerebbe l'evento su Google senza riferimento qui, e la volta dopo si
+  creerebbe un doppione — il tipo di danno che nessuno perdona a un'app di
+  produttività.
+- Parte da sé a ogni pianificazione, spostamento, ridimensionamento,
+  completamento ed **eliminazione**, in modo silenzioso: è una conseguenza
+  della pianificazione, non un'azione dell'utente.
+- Interruttore `google_write_enabled` **spento di default**; senza calendario
+  di destinazione la rotta non fa nulla.
+
+**Rendering**
+- Gli eventi Google hanno **sfondo tenue e bordo laterale saturo**, contro il
+  colore pieno dei blocchi task: deve leggersi a colpo d'occhio che è qualcosa
+  che subisci, non qualcosa che hai deciso.
+- Task ed eventi si dispongono **insieme** nella stessa griglia di colonne: un
+  blocco e una riunione alla stessa ora vanno affiancati, non uno sopra
+  l'altro.
+- Gli *all day* stanno in una striscia sopra la griglia e **non contano come
+  ostacoli**: un compleanno non è un motivo per non pianificare nulla per un
+  giorno intero.
+- Spunta **locale** sugli eventi (`local_done`), mai scritta su Google.
+
+**146 test** in tutto; migrazione `0002` verificata sul Postgres usa e getta.
+
+### Scelte da segnalare
+- **Niente `googleapis`**: quel pacchetto pesa decine di megabyte per quattro
+  chiamate, e su una funzione serverless il peso è tempo di avvio. Le chiamate
+  sono scritte a mano in `lib/google/api.ts`.
+- **`GOOGLE_STATE_COOKIE` e `channelTokenFor` stanno in `lib/`, non nelle
+  rotte**: i file di route possono esportare solo i nomi previsti da Next, e
+  qualunque altra costante esportata da lì fa fallire il build. Trovato in
+  build, non a occhio.
+- **`api/public` è escluso dal middleware**: lo chiama Google, non il browser,
+  e lì non c'è alcun cookie da rinnovare.
+
+### Resta da fare
+- La schermata di **Impostazioni** per scegliere quali calendari abilitare,
+  assegnare i colori e attivare la scrittura: passo 12. Fino ad allora
+  `enabled` arriva da ciò che l'utente ha già scelto su Google e
+  `is_write_target` va impostato a mano.

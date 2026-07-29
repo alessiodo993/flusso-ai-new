@@ -2,7 +2,6 @@
 
 import { PanelLeftOpen } from "lucide-react";
 import { useCallback, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { CalendarSection } from "@/components/calendar/calendar-section";
@@ -16,6 +15,8 @@ import { CommandPalette } from "@/components/shell/command-palette";
 import { LeftColumnTabs } from "@/components/shell/left-column-tabs";
 import { QuickCaptureFab } from "@/components/shell/quick-capture-fab";
 import { useFlussoEvent, type ListFilter, type Section } from "@/lib/events";
+import { useGoogleCalendars, useGoogleSync } from "@/lib/hooks/use-google";
+import { useGooglePolling } from "@/lib/hooks/use-google-polling";
 import { cn } from "@/lib/utils";
 
 /** Le sezioni che vivono nella colonna di sinistra su desktop. */
@@ -37,7 +38,11 @@ export function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
   const [listFilter, setListFilter] = useState<ListFilter | null>(null);
 
-  const queryClient = useQueryClient();
+  const { enabled: enabledCalendars } = useGoogleCalendars();
+  const googleSync = useGoogleSync();
+
+  // Il polling parte solo se c'è almeno un calendario da guardare.
+  useGooglePolling(enabledCalendars.length > 0);
 
   const setSection = useCallback((next: Section) => {
     setSectionState(next);
@@ -59,10 +64,19 @@ export function AppShell() {
   );
 
   const refreshCalendars = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: ["google"] });
-    void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-    toast.success("Calendari aggiornati.");
-  }, [queryClient]);
+    if (enabledCalendars.length === 0) {
+      toast("Nessun calendario Google collegato.", {
+        action: {
+          label: "Collega",
+          onClick: () => {
+            window.location.href = "/api/google/connect";
+          },
+        },
+      });
+      return;
+    }
+    googleSync.mutate();
+  }, [enabledCalendars.length, googleSync]);
 
   const showingOkr = section === "obiettivi";
   // Su desktop la colonna sinistra sparisce solo se richiusa a mano.
