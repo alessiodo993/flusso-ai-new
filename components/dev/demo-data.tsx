@@ -6,7 +6,8 @@ import { useState } from "react";
 import { qk } from "@/lib/hooks/query-keys";
 import { FALLBACK_SETTINGS } from "@/lib/hooks/use-settings";
 import { addDaysISO, todayISO } from "@/lib/time";
-import type { FocusSession, Idea, Project, Task } from "@/lib/types";
+import { quarterOf } from "@/lib/time";
+import type { FocusSession, Idea, Okr, Project, Task } from "@/lib/types";
 
 /**
  * Riempie la cache di TanStack Query con dati verosimili, senza toccare la
@@ -156,6 +157,37 @@ export function DemoData({ children }: { children: React.ReactNode }) {
       created_at: "",
     }));
 
+    // Due obiettivi del trimestre corrente, uno indietro e uno in linea.
+    const quarter = quarterOf(today);
+    const okrs: Okr[] = [
+      {
+        id: "o1",
+        user_id: "demo",
+        project_id: "p1",
+        quarter,
+        objective: "Consegnare la prima stesura completa della tesi",
+        created_at: "",
+        key_results: [
+          { id: "k1", text: "Capitoli scritti", current: 2, target: 6, unit: "capitoli" },
+          { id: "k2", text: "Fonti schedate", current: 18, target: 60, unit: "fonti" },
+          { id: "k3", text: "Revisioni col relatore", current: 1, target: 4, unit: "incontri" },
+        ],
+      },
+      {
+        id: "o2",
+        user_id: "demo",
+        project_id: "p2",
+        quarter,
+        objective: "Portare Flusso al primo uso quotidiano",
+        created_at: "",
+        key_results: [
+          { id: "k4", text: "Giornate pianificate di seguito", current: 9, target: 30, unit: "giorni" },
+          { id: "k5", text: "Sezioni finite", current: 8, target: 13, unit: "sezioni" },
+        ],
+      },
+    ];
+
+    queryClient.setQueryData(qk.okrs(quarter), okrs);
     queryClient.setQueryData(qk.projects, projects);
     queryClient.setQueryData(qk.focusSessions, sessions);
     queryClient.setQueryData(qk.calibration, tasks);

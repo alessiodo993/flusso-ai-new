@@ -17,6 +17,7 @@ import {
 import { StaleSection } from "@/components/list/stale-section";
 import { TaskSheet } from "@/components/list/task-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionStatus } from "@/components/ui/section-status";
 import { safeColor } from "@/lib/colors";
 import type { ListFilter } from "@/lib/events";
 import { useProjects } from "@/lib/hooks/use-projects";
@@ -49,7 +50,7 @@ export function ListSection({
   onClearFilter: () => void;
 }) {
   const today = todayISO();
-  const { tasks, isLoading } = useTasks();
+  const { tasks, isLoading, isError, error, refetch } = useTasks();
   const { active: projects, byId: projectsById } = useProjects();
 
   const create = useCreateTask();
@@ -164,25 +165,37 @@ export function ListSection({
         />
       )}
 
-      {visibleCount === 0 && !isLoading && (
-        <EmptyState
-          Icon={hasFilters(filters) ? SearchX : ListChecks}
-          title={
-            hasFilters(filters)
-              ? "Nessun task con questi filtri"
-              : "La lista è vuota"
-          }
-          description={
-            hasFilters(filters)
-              ? "Prova ad allargare la ricerca."
-              : "Qui arriva quello che hai catturato, pronto per diventare un blocco."
-          }
-          action={
-            hasFilters(filters) ? (
-              <button type="button" className="btn btn-soft" onClick={clearFilters}>
-                Togli i filtri
-              </button>
-            ) : undefined
+      {visibleCount === 0 && (
+        <SectionStatus
+          isLoading={isLoading}
+          isError={isError}
+          error={error}
+          onRetry={() => void refetch()}
+          empty={
+            <EmptyState
+              Icon={hasFilters(filters) ? SearchX : ListChecks}
+              title={
+                hasFilters(filters)
+                  ? "Nessun task con questi filtri"
+                  : "La lista è vuota"
+              }
+              description={
+                hasFilters(filters)
+                  ? "Prova ad allargare la ricerca."
+                  : "Qui arriva quello che hai catturato, pronto per diventare un blocco."
+              }
+              action={
+                hasFilters(filters) ? (
+                  <button
+                    type="button"
+                    className="btn btn-soft"
+                    onClick={clearFilters}
+                  >
+                    Togli i filtri
+                  </button>
+                ) : undefined
+              }
+            />
           }
         />
       )}
@@ -220,7 +233,9 @@ export function ListSection({
                     style={{ background: safeColor(group.color) }}
                   />
                 )}
-                <span className="truncate text-sm font-medium">{group.label}</span>
+                <span className="truncate text-sm font-medium">
+                  {group.label}
+                </span>
                 <span className="tnum ml-auto text-xs text-ink-faint">
                   {group.tasks.length}
                 </span>

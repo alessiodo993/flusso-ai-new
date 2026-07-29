@@ -11,6 +11,7 @@ import { IdeaCard } from "@/components/ideas/idea-card";
 import { CaptureBar } from "@/components/shared/capture-bar";
 import { SelectionBar } from "@/components/shared/selection-bar";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionStatus } from "@/components/ui/section-status";
 import {
   useCreateIdea,
   useDeleteIdeas,
@@ -34,7 +35,7 @@ import type { Idea } from "@/lib/types";
  * un'idea fino al calendario dell'altra colonna.
  */
 export function IdeasSection() {
-  const { ideas, isLoading } = useIdeas();
+  const { ideas, isLoading, isError, error, refetch } = useIdeas();
   const { byId: projectsById } = useProjects();
 
   const create = useCreateIdea();
@@ -123,37 +124,43 @@ export function IdeasSection() {
         />
       )}
 
-      {ideas.length === 0
-        ? !isLoading && (
+      {ideas.length === 0 ? (
+        <SectionStatus
+          isLoading={isLoading}
+          isError={isError}
+          error={error}
+          onRetry={() => void refetch()}
+          empty={
             <EmptyState
               Icon={Lightbulb}
               title="Nessuna idea in attesa"
               description="Scrivi un pensiero appena ti passa per la testa: deciderai dopo se merita un blocco."
             />
-          )
-        : (
-            <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-              <ul>
-                {ideas.map((idea) => (
-                  <IdeaCard
-                    key={idea.id}
-                    idea={idea}
-                    project={
-                      idea.project_id
-                        ? projectsById.get(idea.project_id)
-                        : undefined
-                    }
-                    selected={selected.has(idea.id)}
-                    selectionActive={selected.size > 0}
-                    onToggleSelect={toggleSelect}
-                    onRename={(id, title) => update.mutate({ id, title })}
-                    onPromote={(one) => void promoteIdeas([one])}
-                    onDelete={(one) => deleteIdeas([one])}
-                  />
-                ))}
-              </ul>
-            </SortableContext>
-          )}
+          }
+        />
+      ) : (
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <ul>
+            {ideas.map((idea) => (
+              <IdeaCard
+                key={idea.id}
+                idea={idea}
+                project={
+                  idea.project_id
+                    ? projectsById.get(idea.project_id)
+                    : undefined
+                }
+                selected={selected.has(idea.id)}
+                selectionActive={selected.size > 0}
+                onToggleSelect={toggleSelect}
+                onRename={(id, title) => update.mutate({ id, title })}
+                onPromote={(one) => void promoteIdeas([one])}
+                onDelete={(one) => deleteIdeas([one])}
+              />
+            ))}
+          </ul>
+        </SortableContext>
+      )}
     </section>
   );
 }

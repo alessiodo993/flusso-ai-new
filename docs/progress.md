@@ -14,8 +14,8 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 | 7 | Google Calendar | ✅ fatto |
 | 8 | Focus Mode | ✅ fatto |
 | 9 | Calibrazione, rinvii, decay, Highlight | ✅ fatto |
-| 10 | AI (cattura, planner, OKR) | ⏳ |
-| 11 | OKR e dashboard ritmo | ⏳ |
+| 10 | AI (cattura, planner, OKR) | ⏸ in attesa della chiave Anthropic |
+| 11 | OKR e dashboard ritmo | ✅ fatto |
 | 12 | Kickoff/Shutdown, Impostazioni, Settimana | ⏳ |
 | 13 | Rifinitura | ⏳ |
 
@@ -670,3 +670,70 @@ che lo blocca.
 
 ### Resta da fare
 - La cattura magica e il pianificatore che useranno il coefficiente: passo 10.
+
+---
+
+## Passo 11 — Obiettivi, ponte con i task, dashboard ritmo
+
+*Fatto prima del passo 10, su indicazione dell'utente: il pianificatore AI
+aspetta la chiave Anthropic.*
+
+### Fatto
+
+**Aritmetica dei trimestri — `lib/quarter.ts`, 21 test**
+- Confini, trimestre precedente e successivo, giorni rimasti, avanzamento.
+  I confini si calcolano come «il giorno prima dell'inizio del trimestre
+  dopo»: così non serve sapere quanti giorni ha febbraio, e gli anni bisestili
+  funzionano da soli.
+- **`rhythmOf`** confronta il tempo trascorso con l'avanzamento reale. È la
+  sola informazione che rende utile un OKR a metà trimestre: senza il
+  confronto, «al 30%» non dice se sei in ritardo o in anticipo, e sono due
+  situazioni opposte. Sotto i 10 punti di scarto non commenta.
+- Il messaggio è asciutto di proposito, e a trimestre chiuso **non promette
+  giorni che non ci sono**.
+- La media generale **ignora gli obiettivi senza risultati chiave**: contarli
+  come zero farebbe sembrare di essere indietro per colpa di un obiettivo che
+  non è ancora stato scritto.
+
+**Sezione Obiettivi**
+- Selettori **anno 2026–2030** e **trimestre Q1–Q4**, preselezionati sul
+  periodo corrente, con ritorno rapido al trimestre in corso.
+- Dashboard ritmo con due barre sovrapposte: il trimestre sotto, i risultati
+  sopra. Lo scarto fra le due estremità è il ritardo, e si vede senza leggere.
+- Ogni obiettivo ha il **bordo del colore del progetto**, un progress ring, i
+  **risultati chiave collassabili** con `−` e `+` inline di passo
+  `max(1, target/20)` che scrivono subito.
+- **Ponte con l'esecuzione**: la chip `N attivi · M completati` apre la Lista
+  già filtrata su quel progetto. Verificato nel browser: il filtro arriva
+  impostato.
+- Stato vuoto con **«Copia da 2026-Q2»**, che ricopia gli obiettivi
+  **azzerando i valori correnti** — portarsi dietro anche i progressi sarebbe
+  il modo più rapido per rendere gli OKR una finzione.
+- Editor con `da` / `a` / unità per ogni risultato: chiede un **numero da
+  raggiungere**, non una descrizione. È la differenza fra «migliorare la
+  documentazione» e «dieci pagine riscritte».
+
+**214 test** in tutto.
+
+### Difetto trovato e corretto — stati vuoti che non c'erano
+Passando a un trimestre senza obiettivi la sezione restava **completamente
+bianca**. La causa era una forma scritta in tre punti diversi —
+`{lista.length === 0 && !isLoading && <Vuoto/>}` — che copre due casi su tre e
+lascia il terzo, l'**errore di caricamento**, come un pannello vuoto per
+sempre: il modo peggiore di dire che qualcosa non va.
+
+Ora c'è `SectionStatus`, che distingue i tre casi (sto caricando / il
+caricamento è fallito / davvero non c'è nulla) e mostra un errore con
+«Riprova». Applicato a **Obiettivi, Lista e Idee**.
+
+### Nota sul metodo
+Il difetto è emerso da uno screenshot, non dai test. Nella stessa sessione ho
+inseguito per un po' una falsa regressione — nessuna scheda cambiava sezione —
+che si è rivelata un server di sviluppo rimasto attivo su `.next` cancellata:
+serviva HTML corretto ma nessun JavaScript, quindi la pagina non si idratava.
+Il codice non c'entrava.
+
+### Resta da fare
+- Passo 10 (AI), in attesa della chiave Anthropic. L'**analisi AI dei
+  risultati chiave** prevista in §6.8 fa parte di quel passo e non è ancora
+  presente.
