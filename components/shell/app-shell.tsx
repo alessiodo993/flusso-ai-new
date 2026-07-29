@@ -26,6 +26,7 @@ import { useFlussoEvent, type ListFilter, type Section } from "@/lib/events";
 import { useGoogleCalendars, useGoogleSync } from "@/lib/hooks/use-google";
 import { useGooglePolling } from "@/lib/hooks/use-google-polling";
 import { useDecaySweep } from "@/lib/hooks/use-decay-sweep";
+import { useSnooze } from "@/lib/hooks/use-snooze";
 import { cn } from "@/lib/utils";
 
 /** Le sezioni che vivono nella colonna di sinistra su desktop. */
@@ -55,6 +56,9 @@ export function AppShell() {
 
   // Una passata per sessione sui task dimenticati da tre settimane.
   useDecaySweep();
+
+  // «Rimanda 15 min» premuto sulla notifica, anche ad app chiusa.
+  useSnooze();
 
   const setSection = useCallback((next: Section) => {
     setSectionState(next);

@@ -24,6 +24,7 @@ import {
 import { useProjects } from "@/lib/hooks/use-projects";
 import { useDeleteTasks } from "@/lib/hooks/use-tasks";
 import { undoableToast } from "@/lib/hooks/use-undo";
+import { useVisibleLimit } from "@/lib/hooks/use-visible-limit";
 import type { Idea } from "@/lib/types";
 
 /**
@@ -48,7 +49,12 @@ export function IdeasSection() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const ids = useMemo(() => ideas.map((idea) => idea.id), [ideas]);
+  const { limit, hidden, next, showMore } = useVisibleLimit(ideas.length);
+  const shown = useMemo(() => ideas.slice(0, limit), [ideas, limit]);
+
+  // Il contesto trascinabile conosce solo le idee montate: un id di una card
+  // che non esiste nel DOM romperebbe il riordino.
+  const ids = useMemo(() => shown.map((idea) => idea.id), [shown]);
   const selectedIdeas = useMemo(
     () => ideas.filter((idea) => selected.has(idea.id)),
     [ideas, selected],
@@ -141,7 +147,7 @@ export function IdeasSection() {
       ) : (
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <ul>
-            {ideas.map((idea) => (
+            {shown.map((idea) => (
               <IdeaCard
                 key={idea.id}
                 idea={idea}
@@ -160,6 +166,16 @@ export function IdeasSection() {
             ))}
           </ul>
         </SortableContext>
+      )}
+
+      {hidden > 0 && (
+        <button
+          type="button"
+          className="btn btn-ghost w-full rounded-none border-t border-line"
+          onClick={showMore}
+        >
+          Mostra altre {next} · {hidden} nascoste
+        </button>
       )}
     </section>
   );

@@ -149,7 +149,9 @@ export function CalendarSection() {
                 className="tnum px-2"
               >
                 {level}
-                <span className="ml-0.5 text-[10px] opacity-70">min</span>
+                {/* Senza opacità: al 70% questo suffisso scendeva sotto il 4.5:1, e
+                    la gerarchia la fa già la dimensione. */}
+                <span className="ml-0.5 text-[10px]">min</span>
               </button>
             ))}
           </div>

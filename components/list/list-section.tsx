@@ -32,6 +32,7 @@ import {
   useUpdateTask,
 } from "@/lib/hooks/use-tasks";
 import { undoableToast } from "@/lib/hooks/use-undo";
+import { useVisibleLimit } from "@/lib/hooks/use-visible-limit";
 import { buildListGroups } from "@/lib/list-view";
 import { moveTask } from "@/lib/postpone";
 import { todayISO } from "@/lib/time";
@@ -91,6 +92,19 @@ export function ListSection({
     () => groups.reduce((total, group) => total + group.tasks.length, 0),
     [groups],
   );
+
+  // Il taglio vale sull'intera sezione, non per gruppo: quello che conta è
+  // quante card finiscono nel DOM.
+  const { limit, hidden, next, showMore } = useVisibleLimit(visibleCount);
+
+  const shown = useMemo(() => {
+    let left = limit;
+    return groups.map((group) => {
+      const tasks = group.tasks.slice(0, Math.max(0, left));
+      left -= tasks.length;
+      return { ...group, tasks };
+    });
+  }, [groups, limit]);
 
   const selectedTasks = useMemo(
     () => tasks.filter((task) => selected.has(task.id)),
@@ -200,7 +214,7 @@ export function ListSection({
         />
       )}
 
-      {groups.map((group) => {
+      {shown.map((group) => {
         const isCollapsed = collapsed.has(group.id);
         const grouped = sort === "progetto";
 
@@ -271,6 +285,16 @@ export function ListSection({
           </div>
         );
       })}
+
+      {hidden > 0 && (
+        <button
+          type="button"
+          className="btn btn-ghost w-full rounded-none border-t border-line"
+          onClick={showMore}
+        >
+          Mostra altri {next} · {hidden} nascosti
+        </button>
+      )}
 
       <TaskSheet
         task={openTask}

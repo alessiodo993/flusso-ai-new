@@ -5,7 +5,7 @@ import { useCallback, useMemo } from "react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { layoutOverlaps } from "@/lib/calendar-layout";
-import { safeColor, readableInk, withAlpha } from "@/lib/colors";
+import { blockSurface, safeColor, readableInk, withAlpha } from "@/lib/colors";
 import { emit } from "@/lib/events";
 import { useBlocks } from "@/lib/hooks/use-blocks";
 import { useGoogleCalendars, useGoogleEvents } from "@/lib/hooks/use-google";
@@ -244,7 +244,7 @@ export function WeekView({
                   }
 
                   const color = item.project_id
-                    ? safeColor(projectsById.get(item.project_id)?.color)
+                    ? blockSurface(projectsById.get(item.project_id)?.color ?? "")
                     : "var(--line-strong)";
 
                   return (

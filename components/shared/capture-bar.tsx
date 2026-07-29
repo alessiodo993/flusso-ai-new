@@ -120,6 +120,13 @@ export function CaptureBar({
             : "max-h-0 opacity-0",
         )}
         aria-hidden={!detailsVisible && variant === "task"}
+        /*
+         * `inert` insieme ad `aria-hidden`: nascondere agli screen reader un
+         * blocco che resta raggiungibile col Tab crea il caso peggiore —
+         * il fuoco finisce in un campo che non viene annunciato e che non si
+         * vede nemmeno, perché è alto zero pixel.
+         */
+        inert={!detailsVisible && variant === "task"}
       >
         <SelectField
           ariaLabel="Progetto"

@@ -14,8 +14,14 @@
   --surface: #fffdf9; /* bianco sporco */
   --surface-sunken: #f3efe7;
   --ink: #1d2b22; /* verde-inchiostro */
-  --ink-soft: #5b6b61;
-  --ink-faint: #8d978f;
+  /*
+   * I due grigi passano entrambi il 4.5:1 sulla superficie peggiore, quella
+   * incassata. Il primo valore di `--ink-faint` (#8d978f) stava a 2.6 e
+   * l'ha trovato axe: era leggibile per me e non per chi ha una vista
+   * normale al sole, che è esattamente il caso che la soglia difende.
+   */
+  --ink-soft: #4b584f;
+  --ink-faint: #636d66;
   --line: #e7e1d6;
   --line-strong: #d3cabb;
 
@@ -24,7 +30,7 @@
   --accent-soft: rgb(63 107 79 / 0.1);
   --accent-hover: #355c43;
 
-  --warn: #a8711c; /* ambra: scadenze entro due giorni */
+  --warn: #8f5f16; /* ambra: scadenze entro due giorni */
   --warn-soft: rgb(168 113 28 / 0.12);
   --danger: #a94a3e; /* rosso desaturato: scadute */
   --danger-soft: rgb(169 74 62 / 0.12);
@@ -49,8 +55,8 @@
   --surface: #1b1f23;
   --surface-sunken: #101316;
   --ink: #e8ece8;
-  --ink-soft: #a3aea7;
-  --ink-faint: #6d7871;
+  --ink-soft: #b3bdb6;
+  --ink-faint: #8a948d;
   --line: #2a3036;
   --line-strong: #3c444b;
 
@@ -61,7 +67,10 @@
 
   --warn: #d3a250;
   --warn-soft: rgb(211 162 80 / 0.16);
-  --danger: #d1786b;
+  /* Schiarito da #d1786b: sulla chip tinta stava a 4.17. `--danger` qui è
+     sempre e solo colore di testo — anche `.btn-danger` ha sfondo
+     trasparente — quindi schiarirlo non peggiora nulla. */
+  --danger: #e08d80;
   --danger-soft: rgb(209 120 107 / 0.16);
 
   --shadow-lift: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
@@ -153,7 +162,9 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    min-height: 2.5rem;
+    /* Bersaglio pieno su telefono; da 1080px in su si stringe, perché lì c'è
+       un puntatore. Le utility `h-8`/`h-9` restano ma non scendono sotto. */
+    min-height: 44px;
     padding: 0 0.875rem;
     border-radius: var(--radius-sm);
     border: 1px solid transparent;
@@ -166,6 +177,12 @@
       border-color 150ms ease-out,
       color 150ms ease-out,
       opacity 150ms ease-out;
+  }
+
+  @media (min-width: 1080px) {
+    .btn {
+      min-height: 2.25rem;
+    }
   }
 
   .btn:disabled {
@@ -287,6 +304,24 @@
     white-space: nowrap;
   }
 
+  /*
+   * Una chip che è anche un pulsante ha bisogno dell'area tattile, che la
+   * sola altezza del testo non dà: 23px non si centrano col pollice.
+   */
+  button.chip,
+  a.chip {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  @media (min-width: 1080px) {
+    button.chip,
+    a.chip {
+      min-height: 1.75rem;
+      min-width: 0;
+    }
+  }
+
   .chip-accent {
     border-color: transparent;
     background: var(--accent-soft);
@@ -317,6 +352,12 @@
   }
 
   .seg > button {
+    /*
+     * Su telefono i bersagli stanno a 44px, come tutto il resto: qui si tocca
+     * col pollice mentre si cammina. Da 1080px in su si stringono, perché lì
+     * c'è un puntatore e un controllo alto 44px ruba spazio alla giornata.
+     */
+    min-height: 44px;
     padding: 0.375rem 0.75rem;
     border-radius: 999px;
     font-size: 0.8125rem;
@@ -326,6 +367,12 @@
     transition:
       background-color 150ms ease-out,
       color 150ms ease-out;
+  }
+
+  @media (min-width: 1080px) {
+    .seg > button {
+      min-height: 2.125rem;
+    }
   }
 
   .seg > button:hover {

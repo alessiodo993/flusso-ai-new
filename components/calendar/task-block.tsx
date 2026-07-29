@@ -4,7 +4,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { Check, Play, Star } from "lucide-react";
 import { memo, useCallback, useRef, useState } from "react";
 
-import { readableInk, safeColor } from "@/lib/colors";
+import { blockSurface, readableInk, withAlpha } from "@/lib/colors";
 import { fmtMin, snap, SLOT } from "@/lib/time";
 import type { Project, Task } from "@/lib/types";
 import { cn, clamp, haptic } from "@/lib/utils";
@@ -43,9 +43,19 @@ export const TaskBlock = memo(function TaskBlock({
   onStartFocus: (task: Task) => void;
   onResize: (task: Task, estMinutes: number) => void;
 }) {
-  const color = safeColor(project?.color);
-  const ink = readableInk(color);
+  // `blockSurface` e non `safeColor`: il titolo va sopra questo colore, e
+  // una tinta di mezza luminanza non regge il testo in nessuna direzione.
+  const color = blockSurface(project?.color ?? "");
   const done = task.status === "done";
+
+  /*
+   * Un blocco fatto si spegne cambiando **sfondo**, non opacità.
+   * `opacity-60` su tutto il blocco portava anche il testo sotto il 4.5:1 —
+   * axe l'ha trovato — e un blocco completato deve restare leggibile: è
+   * ancora la prova di come è andata la giornata.
+   */
+  const background = done ? withAlpha(color, 0.22) : color;
+  const ink = done ? "var(--ink-soft)" : readableInk(color);
 
   const [preview, setPreview] = useState<number | null>(null);
   const resizing = useRef<{ startY: number; startMinutes: number } | null>(null);
@@ -112,17 +122,23 @@ export const TaskBlock = memo(function TaskBlock({
         height: Math.max(shownHeight, 22),
         left: `${left}%`,
         width: `calc(${width}% - 3px)`,
-        background: color,
+        background,
         color: ink,
       }}
       className={cn(
         "absolute overflow-hidden rounded-flusso-sm text-left",
         "touch-none select-none",
         isDragging && "opacity-30",
-        done && "opacity-60",
       )}
-      {...attributes}
+      data-blocco="task"
       {...listeners}
+      // dnd-kit metterebbe qui `role="button"` e `tabIndex={0}`: un controllo
+      // interattivo che ne contiene altri tre — apri, avvia, fatto — e che
+      // axe segnala giustamente come `nested-interactive`. Il trascinamento
+      // col puntatore resta (sono i `listeners`); da tastiera un blocco si
+      // sposta aprendolo e usando «Sposta a…», che è anche più preciso di
+      // trascinare al buio.
+      aria-disabled={attributes["aria-disabled"]}
     >
       <button
         type="button"
@@ -143,7 +159,7 @@ export const TaskBlock = memo(function TaskBlock({
         </span>
 
         {shownHeight > 40 && (
-          <span className="tnum mt-0.5 block text-[11px] opacity-80">
+          <span className="tnum mt-0.5 block text-[11px]">
             {fmtMin(start)}–{fmtMin(start + minutes)}
           </span>
         )}

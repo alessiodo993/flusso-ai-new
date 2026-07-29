@@ -42,19 +42,20 @@ export const GoogleEventBlock = memo(function GoogleEventBlock({
         height: Math.max(height, 20),
         left: `${left}%`,
         width: `calc(${width}% - 3px)`,
-        background: withAlpha(color, 0.14),
+        // Come per i task: un evento spuntato si smorza nello sfondo, non
+        // nel testo, che deve restare leggibile.
+        background: withAlpha(color, event.local_done ? 0.07 : 0.14),
         borderLeftColor: color,
       }}
       className={cn(
         "absolute overflow-hidden rounded-flusso-sm border-l-[3px] px-1.5 py-1",
-        event.local_done && "opacity-55",
       )}
       title={`${event.title} · ${calendar?.name ?? "Google"}`}
     >
       <p
         className={cn(
-          "truncate text-[12px] font-medium leading-tight text-ink",
-          event.local_done && "line-through",
+          "truncate text-[12px] font-medium leading-tight",
+          event.local_done ? "text-ink-soft line-through" : "text-ink",
         )}
       >
         {event.title}
@@ -120,7 +121,9 @@ export function AllDayStrip({
             onClick={() => onToggleDone(event)}
             aria-pressed={event.local_done}
             style={{
-              background: withAlpha(color, 0.14),
+              // Come per i task: un evento spuntato si smorza nello sfondo, non
+        // nel testo, che deve restare leggibile.
+        background: withAlpha(color, event.local_done ? 0.07 : 0.14),
               borderLeftColor: color,
             }}
             className={cn(

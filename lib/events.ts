@@ -54,6 +54,8 @@ type EventMap = {
   };
   "flusso:open-palette": Record<string, never>;
   "flusso:open-planner": Record<string, never>;
+  /** «Rimanda 15 min» dalla notifica di inizio blocco. */
+  "flusso:snooze": { taskId: string; minutes: number };
   "flusso:open-kickoff": Record<string, never>;
   "flusso:open-shutdown": Record<string, never>;
 };

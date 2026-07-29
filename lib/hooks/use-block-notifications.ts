@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { emit } from "@/lib/events";
+import { useServiceWorker } from "@/lib/hooks/use-service-worker";
 import { nowMinutes, todayISO } from "@/lib/time";
 import { isScheduled, type Task } from "@/lib/types";
 
@@ -33,6 +34,7 @@ export function useBlockNotifications(tasks: Task[]) {
   const [permission, setPermission] = useState<NotificationPermissionState>(
     "unsupported",
   );
+  const { notify } = useServiceWorker();
 
   useEffect(() => setPermission(currentPermission()), []);
 
@@ -70,6 +72,21 @@ export function useBlockNotifications(tasks: Task[]) {
     const timers = upcoming.map((task) =>
       window.setTimeout(
         () => {
+          /*
+           * Prima si prova col service worker: è l'unico modo di avere i
+           * pulsanti «Inizia» e «Rimanda 15 min», perché una notifica creata
+           * dal documento non supporta le azioni. Se il worker non c'è —
+           * sviluppo, browser senza supporto, registrazione fallita — si
+           * ripiega sull'avviso semplice, che almeno avvisa.
+           */
+          const shown = notify({
+            title: task.title,
+            body: "È l'ora di questo blocco.",
+            tag: `flusso-${task.id}`,
+            taskId: task.id,
+          });
+          if (shown) return;
+
           const notification = new Notification(task.title, {
             body: "È l'ora di questo blocco.",
             tag: `flusso-${task.id}`,
@@ -86,7 +103,7 @@ export function useBlockNotifications(tasks: Task[]) {
     );
 
     return () => timers.forEach(clearTimeout);
-  }, [permission, tasks]);
+  }, [notify, permission, tasks]);
 
   /** Vero quando ha senso proporre di attivare gli avvisi. */
   const shouldOffer =

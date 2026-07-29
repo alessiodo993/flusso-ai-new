@@ -31,8 +31,15 @@ export function DayStrip({
   const week = weekDaysISO(day);
   const monday = startOfWeekISO(day);
 
+  /*
+   * Sette giorni da 44px più due frecce da 44 fanno 396: su un telefono da
+   * 390 non ci stanno, e stringere i giorni a 43 per far quadrare i conti
+   * sarebbe barare. La striscia scorre invece di comprimersi — i giorni
+   * restano prendibili col pollice, e la settimana successiva si raggiunge
+   * comunque con la freccia.
+   */
   return (
-    <div className="flex items-center gap-1 px-2 py-2">
+    <div className="scroll-quiet flex items-center gap-1 overflow-x-auto px-2 py-2">
       <button
         type="button"
         className="icon-btn shrink-0"
@@ -42,7 +49,7 @@ export function DayStrip({
         <ChevronLeft className="size-[18px]" />
       </button>
 
-      <div className="grid flex-1 grid-cols-7 gap-0.5">
+      <div className="grid flex-1 grid-cols-7 gap-0.5 app:min-w-0" style={{ minWidth: "20rem" }}>
         {week.map((candidate) => {
           const selected = candidate === day;
           const isToday = candidate === today;
@@ -56,7 +63,7 @@ export function DayStrip({
               aria-pressed={selected}
               aria-label={candidate}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-flusso-sm py-1.5",
+                "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-flusso-sm py-1.5",
                 "transition-colors duration-150 ease-out",
                 selected ? "bg-accent text-accent-ink" : "hover:bg-accent-soft",
               )}
