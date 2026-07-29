@@ -35,7 +35,7 @@ Flusso non è una to-do list. È un sistema di deep work che collega la strategi
 | DnD | `@dnd-kit/core` + `@dnd-kit/sortable` | |
 | Icone / toast | `lucide-react` / `sonner` | |
 | Validazione | `zod` su ogni input server e ogni output AI | |
-| AI | **Anthropic Claude** via `@anthropic-ai/sdk` | Solo in `app/api/ai/*`. `claude-sonnet-4-5` per ragionamento (planner, analisi OKR), `claude-haiku-4-5` per parsing veloce (cattura magica) |
+| AI | **Anthropic Claude** via `@anthropic-ai/sdk` | Solo in `app/api/ai/*`. Modello unico **`claude-sonnet-5`** per tutte le chiamate (cattura magica, planner, analisi OKR, shutdown) |
 | Voce | Web Speech API + fallback upload audio → endpoint server | |
 | Date | `date-fns` + `date-fns-tz` | |
 

@@ -1,0 +1,406 @@
+@import "tailwindcss";
+
+/*
+ * Flusso — design system.
+ * Stile calmo, editoriale, low-noise. Nessun componente scrive colori
+ * esadecimali: tutto passa da questi token. L'unica eccezione sono i colori
+ * dei progetti, che arrivano dal database e si applicano inline.
+ */
+
+:root {
+  color-scheme: light;
+
+  --bg: #faf8f4; /* carta calda */
+  --surface: #fffdf9; /* bianco sporco */
+  --surface-sunken: #f3efe7;
+  --ink: #1d2b22; /* verde-inchiostro */
+  --ink-soft: #5b6b61;
+  --ink-faint: #8d978f;
+  --line: #e7e1d6;
+  --line-strong: #d3cabb;
+
+  --accent: #3f6b4f; /* verde bosco */
+  --accent-ink: #ffffff;
+  --accent-soft: rgb(63 107 79 / 0.1);
+  --accent-hover: #355c43;
+
+  --warn: #a8711c; /* ambra: scadenze entro due giorni */
+  --warn-soft: rgb(168 113 28 / 0.12);
+  --danger: #a94a3e; /* rosso desaturato: scadute */
+  --danger-soft: rgb(169 74 62 / 0.12);
+
+  --shadow-lift:
+    0 1px 2px rgb(29 43 34 / 0.05), 0 8px 24px rgb(29 43 34 / 0.06);
+  --shadow-pop:
+    0 2px 4px rgb(29 43 34 / 0.06), 0 16px 40px rgb(29 43 34 / 0.12);
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
+
+  --header-h: 3.5rem;
+  --bottom-nav-h: 4.25rem;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #14171a;
+  --surface: #1b1f23;
+  --surface-sunken: #101316;
+  --ink: #e8ece8;
+  --ink-soft: #a3aea7;
+  --ink-faint: #6d7871;
+  --line: #2a3036;
+  --line-strong: #3c444b;
+
+  --accent: #6f9d7d;
+  --accent-ink: #10241a;
+  --accent-soft: rgb(111 157 125 / 0.14);
+  --accent-hover: #7fae8c;
+
+  --warn: #d3a250;
+  --warn-soft: rgb(211 162 80 / 0.16);
+  --danger: #d1786b;
+  --danger-soft: rgb(209 120 107 / 0.16);
+
+  --shadow-lift: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
+  --shadow-pop: 0 2px 4px rgb(0 0 0 / 0.35), 0 16px 40px rgb(0 0 0 / 0.5);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), ui-serif, Georgia, serif;
+
+  --radius-flusso: var(--radius);
+  --radius-flusso-sm: var(--radius-sm);
+  --radius-flusso-lg: var(--radius-lg);
+}
+
+/* Il tema è sempre risolto su <html data-theme>, mai lasciato a "auto":
+   lo script di layout traduce la preferenza di sistema prima del paint. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* I numeri non devono mai ballare: timer, orari, cifre OKR. */
+  :where(time, .tnum) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Scrollbar discrete nelle due colonne a scorrimento indipendente. */
+  .scroll-quiet {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
+
+@layer components {
+  /* --- Pulsanti ---------------------------------------------------------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0 0.875rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      background-color 150ms ease-out,
+      border-color 150ms ease-out,
+      color 150ms ease-out,
+      opacity 150ms ease-out;
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .btn-soft {
+    background: var(--surface);
+    color: var(--ink);
+    border-color: var(--line);
+  }
+
+  .btn-soft:hover:not(:disabled) {
+    border-color: var(--line-strong);
+    background: var(--surface-sunken);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border-color: var(--line);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: var(--danger-soft);
+  }
+
+  /* Target touch da 44px anche quando l'icona è piccola. */
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: var(--radius-sm);
+    color: var(--ink-soft);
+    background: transparent;
+    cursor: pointer;
+    transition:
+      background-color 150ms ease-out,
+      color 150ms ease-out;
+  }
+
+  .icon-btn:hover:not(:disabled) {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  .icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Variante compatta: resta cliccabile grazie all'area estesa in ::after. */
+  .icon-btn-sm {
+    position: relative;
+    min-width: 2rem;
+    min-height: 2rem;
+  }
+
+  .icon-btn-sm::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+
+  /* --- Superfici --------------------------------------------------------- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+
+  .panel-soft {
+    background: var(--surface-sunken);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+  }
+
+  .panel-lift {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lift);
+  }
+
+  /* --- Chip -------------------------------------------------------------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-soft);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .chip-accent {
+    border-color: transparent;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .chip-warn {
+    border-color: transparent;
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  .chip-danger {
+    border-color: transparent;
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  /* --- Segmented control ------------------------------------------------- */
+  .seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.1875rem;
+    border-radius: 999px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+  }
+
+  .seg > button {
+    padding: 0.375rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition:
+      background-color 150ms ease-out,
+      color 150ms ease-out;
+  }
+
+  .seg > button:hover {
+    color: var(--ink);
+  }
+
+  .seg > button[data-on="true"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* --- Campi ------------------------------------------------------------- */
+  .field {
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.9375rem;
+    transition: border-color 150ms ease-out;
+  }
+
+  .field::placeholder {
+    color: var(--ink-faint);
+  }
+
+  .field:hover {
+    border-color: var(--line-strong);
+  }
+
+  .field:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .field-bare {
+    background: transparent;
+    border-color: transparent;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* --- Testo ------------------------------------------------------------- */
+  .label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+  }
+
+  .hairline {
+    border-top: 1px solid var(--line);
+  }
+}
+
+@layer utilities {
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Il pollice non deve mai finire sotto la BottomNav o la barra di sistema. */
+  .pb-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+  }
+
+  .pb-nav {
+    padding-bottom: calc(
+      var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 1rem
+    );
+  }
+}
+
+/* Nessuna animazione per chi ha chiesto di non averne. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
