@@ -76,32 +76,149 @@ verifiche su RLS, permessi, trigger e vincoli.
 
 ### 1.4 Configura l'autenticazione
 
-Dashboard → **Authentication**:
+**Dove**: barra laterale → **Authentication** → **URL Configuration**.
+(In alcune versioni della dashboard la stessa pagina sta sotto
+*Project Settings → Authentication*.)
 
-- **URL Configuration** → *Site URL*: `http://localhost:3000` in sviluppo, il
-  dominio Vercel in produzione.
-- **Redirect URLs**: aggiungi entrambi
-  `http://localhost:3000/auth/callback` e
-  `https://<tuo-dominio>/auth/callback`.
-  Senza questi, i link di conferma e di recupero password non tornano indietro.
-- **Providers → Google** (solo se vuoi l'accesso con Google): incolla client ID
-  e secret di un client OAuth Google, e registra in Google Cloud il redirect
-  che Supabase ti mostra in quella schermata —
-  `https://<ref>.supabase.co/auth/v1/callback`.
-  È un client **diverso** da quello del calendario (punto 3).
+Ci sono due campi, e fanno due cose diverse.
+
+#### Site URL — un valore solo
+
+È l'indirizzo **di riferimento** del progetto. Supabase lo usa in due modi:
+
+1. come `{{ .SiteURL }}` nei **template delle email** (conferma registrazione,
+   recupero password, inviti);
+2. come destinazione di ripiego quando il codice non passa alcun `redirectTo`,
+   o quando quello passato non è nell'elenco del punto successivo.
+
+Metti l'indirizzo dell'ambiente **che userai davvero**:
+
+| Ambiente | Site URL |
+|---|---|
+| Sviluppo | `http://localhost:3000` |
+| Produzione | `https://<tuo-dominio>` |
+
+> **Il tranello più comune.** Se in produzione lasci `http://localhost:3000`,
+> le email di conferma arrivano con un link a localhost: sul telefono di chi
+> le riceve non aprono niente. È lo stesso campo, quindi vale la pena
+> cambiarlo appena il dominio esiste.
+
+#### Redirect URLs — un elenco di indirizzi ammessi
+
+Non è una destinazione: è una **lista di permessi**. Quando il codice chiede a
+Supabase di rimandare l'utente da qualche parte, Supabase confronta quella
+richiesta con questo elenco. Se non c'è, **non fallisce con un errore**:
+rimanda silenziosamente al Site URL — ed è per questo che il sintomo tipico è
+«accedo e mi ritrovo al punto di partenza», senza nessun messaggio.
+
+Flusso chiede tre redirect, tutti verso `/auth/callback` e tutti **con una
+query string** (`?next=…`, che serve a riportare l'utente dov'era):
+
+| Da dove | Cosa passa il codice |
+|---|---|
+| `components/auth/login-form.tsx` (registrazione) | `…/auth/callback?next=/app` |
+| `components/auth/login-form.tsx` (accesso Google) | `…/auth/callback?next=/app` |
+| `components/auth/reset-password-form.tsx` | `…/auth/callback?next=/reset-password` |
+
+Poiché c'è sempre una query string, **la voce esatta senza parametri non
+basta**. Usa la forma con carattere jolly, che copre tutti i casi presenti e
+futuri:
+
+```
+http://localhost:3000/**
+https://<tuo-dominio>/**
+```
+
+Il jolly vale solo dentro **domini che possiedi tu**, quindi non allarga la
+superficie: quello che questa lista deve impedire è che qualcuno faccia
+rimbalzare il token verso un dominio *altrui*.
+
+> **Preview di Vercel.** Ogni deploy di anteprima ha un sottodominio diverso,
+> quindi non sarà nell'elenco e l'accesso lì non funzionerà. Puoi aggiungere un
+> pattern tipo `https://*-<tuo-team>.vercel.app/**`, ma è più semplice provare
+> l'autenticazione in locale o in produzione.
+
+#### Providers → Google (facoltativo)
+
+Serve solo se vuoi il pulsante «Continua con Google» nella schermata di
+accesso. Incolla client ID e secret di un client OAuth Google e registra **in
+Google Cloud** il redirect che Supabase ti mostra in quella schermata:
+
+```
+https://<project-ref>.supabase.co/auth/v1/callback
+```
+
+Attenzione: è un client **diverso** e per uno scopo diverso da quello del
+calendario (punto 3). Quello serve a *far entrare* l'utente in Flusso, questo a
+*leggere e scrivere* i suoi eventi. Possono stare nello stesso progetto Google
+Cloud, ma i redirect non si mescolano.
+
+---
 
 ### 1.5 Prendi le chiavi
 
-Dashboard → **Project Settings → API**:
+**Dove**: icona dell'ingranaggio (**Project Settings**) → **API**. Nelle
+dashboard più recenti le chiavi hanno una loro pagina, **API Keys**.
 
-| Dove sta | Variabile |
-|---|---|
-| Project URL | `NEXT_PUBLIC_SUPABASE_URL` |
-| `anon` `public` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
-| `service_role` `secret` | `SUPABASE_SERVICE_ROLE_KEY` |
+Servono tre valori:
 
-La `service_role` scavalca le RLS: non deve mai finire in una variabile
-`NEXT_PUBLIC_`, né in un commit.
+| Nella dashboard | Che aspetto ha | Variabile |
+|---|---|---|
+| **Project URL** | `https://abcdwxyz.supabase.co` | `NEXT_PUBLIC_SUPABASE_URL` |
+| **anon / public** | stringa lunghissima che inizia per `eyJ…` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| **service_role / secret** | uguale a vedersi, ma marcata *secret* | `SUPABASE_SERVICE_ROLE_KEY` |
+
+> Se il tuo progetto mostra invece chiavi che iniziano per `sb_publishable_…` e
+> `sb_secret_…`, è il formato nuovo: vanno negli stessi due posti, la
+> publishable al posto della anon e la secret al posto della service_role.
+
+**Perché due chiavi, e perché una è pubblica.** La `anon` finisce nel bundle
+del browser: chiunque apra gli strumenti da sviluppatore la vede, ed è
+previsto. Non è un lasciapassare, è solo il modo di dire «sono un utente
+qualunque di questo progetto»; a decidere cosa può leggere e scrivere sono le
+**RLS** applicate al punto 1.2. È esattamente per questo che quel passaggio
+non era facoltativo.
+
+La `service_role` invece **scavalca le RLS**: chi ce l'ha legge e scrive i dati
+di chiunque. In Flusso la usa un solo file — `lib/supabase/admin.ts`, per i
+token Google cifrati, che non hanno alcun permesso per `authenticated` — e
+`lib/env.ts` solleva un errore se qualcuno prova a leggerla dal browser.
+
+#### Dove metterle
+
+Crea `.env.local` nella radice del progetto (`cp .env.example .env.local`):
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://abcdwxyz.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi…
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi…
+APP_URL=http://localhost:3000
+```
+
+Tre cose da sapere:
+
+- **Il prefisso `NEXT_PUBLIC_` non è decorativo.** Dice a Next di sostituire
+  quel valore dentro il codice del browser durante il build. Tutto ciò che
+  porta quel prefisso è pubblico per definizione: non metterci mai un segreto.
+- **`.env.local` non finisce in git.** Il `.gitignore` blocca ogni `.env*`,
+  con la sola eccezione di `.env.example`, che è la mappa dei nomi senza i
+  valori.
+- **Dopo averlo modificato, riavvia `npm run dev`.** Le variabili si leggono
+  all'avvio, non a ogni richiesta.
+
+#### Verifica che funzioni
+
+```bash
+npm run dev
+```
+
+Apri `http://localhost:3000/login`, registrati con un'email vera, e controlla
+nella dashboard:
+
+- **Authentication → Users**: deve esserci il nuovo utente.
+- **Table Editor → user_settings**: deve esserci **una riga** con il suo
+  `user_id`. Se c'è, vuol dire che il trigger `handle_new_user` della
+  migrazione ha funzionato e l'intera catena è a posto.
 
 ---
 
