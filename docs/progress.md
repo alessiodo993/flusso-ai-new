@@ -6,7 +6,7 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 | # | Passo | Stato |
 |---|---|---|
 | 1 | Scaffold, token CSS, Supabase Auth, middleware, login | ✅ fatto |
-| 2 | Migrazione DB completa (RLS, GRANT, trigger) | ⏳ |
+| 2 | Migrazione DB completa (RLS, GRANT, trigger) | ✅ fatto |
 | 3 | Tipi, client Supabase, hook CRUD base | ⏳ |
 | 4 | Shell `/app` | ⏳ |
 | 5 | Idee, Lista, TaskCard, TaskSheet | ⏳ |
@@ -86,3 +86,65 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 - L'app gira solo con le variabili di `.env.example` valorizzate; senza
   Supabase configurato il middleware lascia passare e le pagine mostrano
   l'errore, invece di rimbalzare su un login inutilizzabile.
+
+---
+
+## Passo 2 — Migrazione DB
+
+### Fatto
+
+Una sola migrazione, `supabase/migrations/0001_flusso.sql`, con tutte e dodici
+le tabelle di §3. Per ognuna, nell'ordine richiesto: `CREATE TABLE` → `GRANT`
+(`authenticated` + `service_role`) → `ENABLE ROW LEVEL SECURITY` → policy
+`<tabella>_owner_all`. Nessuna foreign key verso `auth.users`, nessun permesso
+per `anon`.
+
+**Oltre alla struttura**
+- `user_id` ha `default auth.uid()`: il client non deve passarlo, e non può
+  sbagliarlo (la `WITH CHECK` lo rifiuterebbe comunque).
+- Trigger `tasks_validate()` come da specifica — non solo validazione, anche
+  deduzione: `first_planned_at` si scrive alla prima pianificazione e non
+  viene più toccato, e `highlight_date` resta sempre coerente con
+  `is_daily_highlight`. Messaggi d'errore in italiano.
+- Indice unico parziale `tasks_one_highlight_per_day`: un solo highlight al
+  giorno, garantito dal database.
+- `focus_sessions.task_id` è `on delete set null`, non `cascade`: cancellare
+  un task non deve cancellare i dati su cui si calcola il coefficiente di
+  ottimismo.
+- `handle_new_user()` (`security definer`, `search_path` fissato) crea la riga
+  `user_settings` alla registrazione; trigger `updated_at` dove serve.
+- Indici su `(user_id, day)`, `(user_id, status)`, `(user_id, deadline)`, più
+  un indice parziale per la vista di default della Lista.
+
+**Verifiche — `npm run db:test`**
+Applica la migrazione a un Postgres usa e getta e ci lancia contro 30
+controlli: isolamento fra due utenti reali (select, update e delete),
+assenza totale di permessi per `anon`, irraggiungibilità dei token Google,
+ogni singolo ramo del trigger dei task, unicità dell'highlight, un solo
+calendario di scrittura, sopravvivenza delle sessioni alla cancellazione del
+task, e la presenza di RLS e policy su *tutte* le tabelle.
+`supabase/tests/harness.sql` ricostruisce il minimo di Supabase che serve
+(i tre ruoli, `auth.users`, `auth.uid()`), così i test girano su qualunque
+PostgreSQL senza dipendere dal cloud.
+
+### Scelte da segnalare
+- **Policy con `(select auth.uid())`** invece di `auth.uid()`. È identico nel
+  significato, ma Postgres lo valuta una volta sola come InitPlan invece che
+  riga per riga: su liste lunghe la differenza è sostanziale.
+- **`google_events` ha il giorno nella chiave unica** — `(user_id, calendar_id,
+  google_event_id, day)` e non la terna della specifica. Un evento che
+  attraversa la mezzanotte viene salvato come una riga per giorno coperto:
+  con la terna comparirebbe solo sul primo giorno e il planner non lo
+  tratterebbe come ostacolo sugli altri.
+- **Vista `google_accounts_public`** per l'interfaccia: espone email, scope e
+  `needs_reconnect`, mai i token. La tabella resta senza alcun `GRANT` per
+  `authenticated`, come richiesto.
+- **Niente `pgcrypto`**: `gen_random_uuid()` è nel core da PostgreSQL 13.
+- Gli eventi Google *all day* si salvano con `start_minute = 0` e
+  `end_minute = 1440` e si distinguono dal flag `all_day`: vanno resi in una
+  striscia a parte e **non** contano come ostacoli per il planner.
+
+### Resta da fare
+- Applicare la migrazione al progetto Supabase reale (va lanciata a mano dal
+  SQL editor o con la CLI: qui non ci sono credenziali).
+- Tipi TypeScript allineati e client tipizzati: passo 3.
