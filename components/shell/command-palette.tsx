@@ -15,6 +15,7 @@ import {
   Target,
   Wand2,
   MoonStar,
+  BarChart3,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -96,6 +97,13 @@ export function CommandPalette() {
         label: "Pianifica con AI",
         Icon: Sparkles,
         run: () => emit("flusso:open-planner", {}),
+      },
+      {
+        id: "calibrazione",
+        label: "Realtà vs Piano",
+        hint: "Quanto pianifichi, quanto esegui",
+        Icon: BarChart3,
+        run: () => emit("flusso:open-calibration", {}),
       },
       {
         id: "shutdown",

@@ -25,6 +25,7 @@ import { useSettings } from "@/lib/hooks/use-settings";
 import { useTaskQuickActions } from "@/lib/hooks/use-task-quick-actions";
 import { useScheduleTask, useTasks, useUpdateTask } from "@/lib/hooks/use-tasks";
 import { fmtDayLong, fmtDayShort, fmtDuration, todayISO, type DayISO } from "@/lib/time";
+import { moveTask } from "@/lib/postpone";
 import { isScheduled, type Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -198,7 +199,16 @@ export function CalendarSection() {
         task={scheduling}
         open={scheduling !== null}
         onOpenChange={(next) => !next && setScheduling(null)}
-        onConfirm={(input) => schedule.mutate(input)}
+        onConfirm={(input) => {
+          const target = tasks.find((one) => one.id === input.id);
+          if (!target) return;
+          moveTask({
+            task: target,
+            day: input.day,
+            startMinute: input.startMinute,
+            schedule: () => schedule.mutate(input),
+          });
+        }}
         onBackToList={actions.backToList}
       />
     </section>

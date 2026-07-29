@@ -13,7 +13,7 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 | 6 | Calendario giorno | ✅ fatto |
 | 7 | Google Calendar | ✅ fatto |
 | 8 | Focus Mode | ✅ fatto |
-| 9 | Calibrazione, rinvii, decay, Highlight | ⏳ |
+| 9 | Calibrazione, rinvii, decay, Highlight | ✅ fatto |
 | 10 | AI (cattura, planner, OKR) | ⏳ |
 | 11 | OKR e dashboard ritmo | ⏳ |
 | 12 | Kickoff/Shutdown, Impostazioni, Settimana | ⏳ |
@@ -603,3 +603,70 @@ tutto.
 
 ### Resta da fare
 - Calibrazione, dialogo del terzo rinvio e decay: passo 9.
+
+---
+
+## Passo 9 — Calibrazione, rinvii, decadimento
+
+### Fatto
+
+**Realtà vs Piano — `lib/calibration.ts`, 28 test**
+- **Coefficiente di ottimismo**: media di `reale / previsto` sulle ultime 30
+  sessioni. Con tre difese contro i numeri inventati:
+  - sotto **5 sessioni non dice niente**, perché un coefficiente costruito su
+    tre casi verrebbe creduto pur non significando nulla;
+  - ogni rapporto è **limitato fra 0,25× e 4×** prima della media: una sessione
+    da cinque minuti previsti e cinque ore reali è quasi sempre un timer
+    lasciato aperto, e senza il limite sposterebbe da sola il coefficiente di
+    tutti;
+  - le sessioni **abbandonate sono escluse**: dicono che è successo altro, non
+    che la stima era sbagliata.
+- Sotto il 10% di scarto la frase non compare: quello è rumore, e dargli un
+  nome gli darebbe importanza.
+- `correctedEstimate` è la stima che userà il pianificatore. Verificato nel
+  browser: con ×1,35 la schermata dice che *«una stima di 60 minuti diventa 80
+  minuti quando cerca lo slot»*.
+- Tasso di completamento, grafico di 14 giorni **pianificato contro eseguito**
+  e classifica dei task più rinviati. Il grafico usa la durata **reale** per
+  l'eseguito: sostituirla con la stima mostrerebbe due volte lo stesso numero,
+  facendo sembrare tutto perfettamente calibrato.
+
+**Attrito sui rinvii**
+- `isPostponement` distingue il rinvio dal riordino: spostare **in avanti** un
+  blocco già pianificato conta, riordinare dentro la stessa giornata o
+  anticipare no. Senza quella distinzione, sistemare la mattinata gonfierebbe
+  il contatore e farebbe comparire il dialogo a chi sta solo mettendo a posto
+  l'agenda. **6 test.**
+- Ogni spostamento passa dall'evento `flusso:postpone`, mai dalla mutazione
+  diretta: è lì che scatta l'attrito, e scavalcarlo lo renderebbe aggirabile.
+- **Dal terzo rinvio** compare un dialogo che **non si chiude cliccando
+  fuori**, con quattro strade: spezzalo in sottotask (con i campi lì dentro),
+  riduci la stima, eliminalo, oppure rimandalo comunque — l'ultima e la meno
+  vistosa. I primi due rinvii passano in silenzio: l'attrito serve quando
+  diventa un'abitudine, non alla prima volta.
+- Verificato nel browser: alla terza volta il dialogo compare, ha tutte e
+  quattro le voci, e resta aperto al clic fuori.
+
+**Decadimento**
+- Un task **mai finito sul calendario** da 21 giorni diventa «da rivedere». Il
+  criterio è `first_planned_at`, non la data di creazione: un task pianificato
+  una volta e poi rimandato non è dimenticato — è un problema diverso, e lo
+  racconta il conteggio dei rinvii.
+- La passata gira nel browser una volta per sessione. Un cron sul server per
+  una manciata di righe sarebbe infrastruttura che non ripaga: se l'utente non
+  apre l'app, non c'è nessuno a cui mostrarli.
+- Sezione **«Da rivedere»** in fondo alla Lista, **richiusa di default**, con
+  rilancia e archivia per riga e «archivia tutti». Non è una lista di cose da
+  fare: è un mucchio di decisioni rimandate, e va guardato quando si è pronti
+  a prenderle.
+
+**193 test** in tutto.
+
+### Difetto trovato e corretto
+I task «da rivedere» comparivano **sia** nella loro sezione **sia** nella lista
+principale — cioè due volte, esattamente il rumore che la sezione doveva
+togliere. `isListable` ora richiede `status_review === 'active'`, con il test
+che lo blocca.
+
+### Resta da fare
+- La cattura magica e il pianificatore che useranno il coefficiente: passo 10.

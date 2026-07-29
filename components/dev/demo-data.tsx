@@ -6,7 +6,7 @@ import { useState } from "react";
 import { qk } from "@/lib/hooks/query-keys";
 import { FALLBACK_SETTINGS } from "@/lib/hooks/use-settings";
 import { addDaysISO, todayISO } from "@/lib/time";
-import type { Idea, Project, Task } from "@/lib/types";
+import type { FocusSession, Idea, Project, Task } from "@/lib/types";
 
 /**
  * Riempie la cache di TanStack Query con dati verosimili, senza toccare la
@@ -99,6 +99,8 @@ export function DemoData({ children }: { children: React.ReactNode }) {
         day: today,
         start_minute: 640,
         est_minutes: 30,
+        // Già rinviato due volte: spostarlo ancora avanti fa scattare l'attrito.
+        postpone_count: 2,
       }),
       task("t10", {
         title: "Chiamata con il team",
@@ -114,6 +116,12 @@ export function DemoData({ children }: { children: React.ReactNode }) {
         start_minute: 750,
         est_minutes: 60,
         energy: "media",
+      }),
+      task("t13", {
+        title: "Leggere il paper sul metodo Delphi",
+        project_id: "p1",
+        created_at: new Date(Date.now() - 40 * 86_400_000).toISOString(),
+        status_review: "stale",
       }),
       task("t12", {
         title: "Spesa",
@@ -132,7 +140,25 @@ export function DemoData({ children }: { children: React.ReactNode }) {
       idea("i4", "Rileggere gli appunti di gennaio", null, 4),
     ];
 
+    // Dodici sessioni concluse, con una tendenza chiara a sottostimare:
+    // servono a far comparire numeri veri in «Realtà vs Piano».
+    const sessions: FocusSession[] = Array.from({ length: 12 }, (_, i) => ({
+      id: `s${i}`,
+      user_id: "demo",
+      task_id: null,
+      started_at: new Date(Date.now() - i * 86_400_000).toISOString(),
+      ended_at: null,
+      planned_minutes: 60,
+      actual_minutes: [78, 90, 66, 84, 96, 72][i % 6],
+      outcome: "completed" as const,
+      was_micro_start: false,
+      paused_seconds: 0,
+      created_at: "",
+    }));
+
     queryClient.setQueryData(qk.projects, projects);
+    queryClient.setQueryData(qk.focusSessions, sessions);
+    queryClient.setQueryData(qk.calibration, tasks);
     queryClient.setQueryData(qk.tasks, tasks);
     queryClient.setQueryData(qk.ideas, ideas);
     queryClient.setQueryData(qk.settings, FALLBACK_SETTINGS);

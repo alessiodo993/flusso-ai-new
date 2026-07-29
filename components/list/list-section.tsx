@@ -14,6 +14,7 @@ import {
   type ListFilters,
   type ListSort,
 } from "@/components/list/list-toolbar";
+import { StaleSection } from "@/components/list/stale-section";
 import { TaskSheet } from "@/components/list/task-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
 import { safeColor } from "@/lib/colors";
@@ -31,6 +32,7 @@ import {
 } from "@/lib/hooks/use-tasks";
 import { undoableToast } from "@/lib/hooks/use-undo";
 import { buildListGroups } from "@/lib/list-view";
+import { moveTask } from "@/lib/postpone";
 import { todayISO } from "@/lib/time";
 import type { Energy, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -265,11 +267,22 @@ export function ListSection({
         }}
       />
 
+      <StaleSection />
+
       <ScheduleSheet
         task={scheduling}
         open={scheduling !== null}
         onOpenChange={(next) => !next && setScheduling(null)}
-        onConfirm={(input) => schedule.mutate(input)}
+        onConfirm={(input) => {
+          const target = tasks.find((one) => one.id === input.id);
+          if (!target) return;
+          moveTask({
+            task: target,
+            day: input.day,
+            startMinute: input.startMinute,
+            schedule: () => schedule.mutate(input),
+          });
+        }}
         onBackToList={actions.backToList}
       />
     </section>

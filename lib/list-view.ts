@@ -12,9 +12,15 @@ export type TaskGroup = {
 
 const NO_PROJECT = "senza-progetto";
 
-/** Quello che la Lista mostra: aperto, non archiviato, non ancora sul calendario. */
+/**
+ * Quello che la Lista mostra: aperto e non ancora sul calendario.
+ *
+ * Restano fuori sia gli archiviati sia quelli **da rivedere**: questi ultimi
+ * hanno una sezione tutta loro in fondo, e mostrarli anche qui li farebbe
+ * comparire due volte — esattamente il rumore che la sezione doveva togliere.
+ */
 export function isListable(task: Task): boolean {
-  return task.day === null && task.status_review !== "archived";
+  return task.day === null && task.status_review === "active";
 }
 
 export function matchesFilters(

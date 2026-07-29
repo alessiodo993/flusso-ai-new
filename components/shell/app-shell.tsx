@@ -6,7 +6,9 @@ import { toast } from "sonner";
 
 import { CalendarSection } from "@/components/calendar/calendar-section";
 import { FlussoDndProvider } from "@/components/dnd/flusso-dnd";
+import { CalibrationSheet } from "@/components/calibration/calibration-sheet";
 import { FocusOverlay } from "@/components/focus/focus-overlay";
+import { PostponeDialog } from "@/components/tasks/postpone-dialog";
 import { IdeasSection } from "@/components/ideas/ideas-section";
 import { ListSection } from "@/components/list/list-section";
 import { OkrSection } from "@/components/okr/okr-section";
@@ -18,6 +20,7 @@ import { QuickCaptureFab } from "@/components/shell/quick-capture-fab";
 import { useFlussoEvent, type ListFilter, type Section } from "@/lib/events";
 import { useGoogleCalendars, useGoogleSync } from "@/lib/hooks/use-google";
 import { useGooglePolling } from "@/lib/hooks/use-google-polling";
+import { useDecaySweep } from "@/lib/hooks/use-decay-sweep";
 import { cn } from "@/lib/utils";
 
 /** Le sezioni che vivono nella colonna di sinistra su desktop. */
@@ -44,6 +47,9 @@ export function AppShell() {
 
   // Il polling parte solo se c'è almeno un calendario da guardare.
   useGooglePolling(enabledCalendars.length > 0);
+
+  // Una passata per sessione sui task dimenticati da tre settimane.
+  useDecaySweep();
 
   const setSection = useCallback((next: Section) => {
     setSectionState(next);
@@ -157,6 +163,8 @@ export function AppShell() {
         <QuickCaptureFab />
         <CommandPalette />
         <FocusOverlay />
+        <PostponeDialog />
+        <CalibrationSheet />
       </div>
     </FlussoDndProvider>
   );

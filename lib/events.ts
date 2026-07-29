@@ -34,6 +34,18 @@ type EventMap = {
   /** Apre la cattura rapida, eventualmente già in ascolto della voce. */
   "flusso:quick-capture": { voice?: boolean };
   "flusso:open-settings": Record<string, never>;
+  /** Realtà vs Piano. */
+  "flusso:open-calibration": Record<string, never>;
+  /**
+   * Sposta un task a un altro giorno **contandolo come rinvio**. Passa sempre
+   * di qui e mai dalla mutazione diretta: è il punto in cui scatta il dialogo
+   * del terzo rinvio, e scavalcarlo lo renderebbe aggirabile.
+   */
+  "flusso:postpone": {
+    taskId: string;
+    day: string | null;
+    startMinute?: number | null;
+  };
   "flusso:open-palette": Record<string, never>;
   "flusso:open-planner": Record<string, never>;
   "flusso:open-shutdown": Record<string, never>;

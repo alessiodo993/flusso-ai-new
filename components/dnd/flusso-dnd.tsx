@@ -18,6 +18,7 @@ import { safeColor } from "@/lib/colors";
 import { useIdeas, usePromoteIdeas, useReorderIdea } from "@/lib/hooks/use-ideas";
 import { useProjects } from "@/lib/hooks/use-projects";
 import { useScheduleTask } from "@/lib/hooks/use-tasks";
+import { moveTask } from "@/lib/postpone";
 import { neighboursForMove } from "@/lib/sort-order";
 import { fmtMin, type DayISO } from "@/lib/time";
 import type { Idea, Task } from "@/lib/types";
@@ -90,11 +91,15 @@ export function FlussoDndProvider({ children }: { children: React.ReactNode }) {
 
       if (over.kind === "slot") {
         if (payload.kind === "task") {
-          schedule.mutate({
-            id: payload.task.id,
+          moveTask({
+            task: payload.task,
             day: over.day,
             startMinute: over.minute,
-            estMinutes: payload.task.est_minutes,
+            schedule: (input) =>
+              schedule.mutate({
+                ...input,
+                estMinutes: payload.task.est_minutes,
+              }),
           });
         } else {
           // Un'idea lasciata sul calendario nasce già come blocco pianificato.
