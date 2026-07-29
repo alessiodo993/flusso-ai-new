@@ -4,10 +4,12 @@ import { CalendarDays, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { DayGrid } from "@/components/calendar/day-grid";
+import { WeekView } from "@/components/calendar/week-view";
 import { DayStrip } from "@/components/calendar/day-strip";
 import { AllDayStrip } from "@/components/calendar/google-event-block";
 import { GoogleReconnectBanner } from "@/components/calendar/google-reconnect-banner";
 import { NotificationOptIn } from "@/components/calendar/notification-opt-in";
+import { RitualPrompt } from "@/components/rituals/ritual-prompt";
 import { ScheduleSheet } from "@/components/list/schedule-sheet";
 import { TaskSheet } from "@/components/list/task-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -40,6 +42,7 @@ export function CalendarSection() {
 
   const isDesktop = useIsDesktop();
   const [zoom, setZoom] = useState<Zoom | null>(null);
+  const [view, setView] = useState<"giorno" | "settimana">("giorno");
 
   const { settings } = useSettings();
   const { tasks, byDay } = useTasks();
@@ -112,8 +115,29 @@ export function CalendarSection() {
             </span>
           )}
 
+          <div className="seg shrink-0" role="group" aria-label="Vista">
+            <button
+              type="button"
+              data-on={view === "giorno"}
+              aria-pressed={view === "giorno"}
+              onClick={() => setView("giorno")}
+            >
+              Giorno
+            </button>
+            <button
+              type="button"
+              data-on={view === "settimana"}
+              aria-pressed={view === "settimana"}
+              onClick={() => setView("settimana")}
+            >
+              Settimana
+            </button>
+          </div>
+
           {/* L'etichetta dello zoom resta leggibile anche sul telefono: senza,
-              i tre numeri da soli non direbbero cosa stanno regolando. */}
+              i tre numeri da soli non direbbero cosa stanno regolando. Nella
+              vista settimana non c'è niente da ingrandire: sparisce. */}
+          {view === "giorno" && (
           <div className="seg shrink-0" role="group" aria-label="Livello di zoom">
             {ZOOMS.map((level) => (
               <button
@@ -129,13 +153,17 @@ export function CalendarSection() {
               </button>
             ))}
           </div>
+          )}
         </div>
       </div>
 
       <GoogleReconnectBanner />
+      <RitualPrompt />
       <NotificationOptIn tasks={tasks} />
 
-      {scheduled.length === 0 && fixed.length === 0 && googleEvents.length === 0 ? (
+      {view === "settimana" ? (
+        <WeekView day={day} onSelectDay={(next) => { setDay(next); setView("giorno"); }} onOpenTask={setOpenTask} />
+      ) : scheduled.length === 0 && fixed.length === 0 && googleEvents.length === 0 ? (
         <EmptyState
           Icon={CalendarDays}
           title="Giornata libera"

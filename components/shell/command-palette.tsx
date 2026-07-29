@@ -13,6 +13,7 @@ import {
   Settings,
   Sparkles,
   Sun,
+  Sunrise,
   Target,
   Wand2,
   MoonStar,
@@ -112,6 +113,13 @@ export function CommandPalette() {
         hint: "Quanto pianifichi, quanto esegui",
         Icon: BarChart3,
         run: () => emit("flusso:open-calibration", {}),
+      },
+      {
+        id: "kickoff",
+        label: "Apri la giornata",
+        hint: "Rituale di kickoff",
+        Icon: Sunrise,
+        run: () => emit("flusso:open-kickoff", {}),
       },
       {
         id: "shutdown",

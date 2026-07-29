@@ -859,3 +859,97 @@ blocchi» è diventato «1 blocco».
   già difensiva sugli orari fuori dagli spazi liberi, l'interfaccia arriva col
   passo 12.
 - Il **kickoff** con confronto storico, sempre passo 12.
+
+---
+
+## Passo 12 — Kickoff, Shutdown, Impostazioni, vista Settimana
+
+### Fatto
+
+**I due riti — `lib/rituals.ts`, 16 test**
+
+Il **kickoff** mostra la giornata, chiede l'Highlight se manca, e confronta
+il piano con la realtà: *«Stai pianificando 5h, di solito ne esegui 3h 20m»*.
+Il confronto **parla solo se lo scarto supera il 25%**: ripetere «sei in
+linea» ogni mattina è rumore, e dopo tre giorni non lo legge più nessuno.
+Serve anche uno storico di almeno tre shutdown, e i giorni senza niente in
+programma sono esclusi dalla media — le domeniche vuote abbasserebbero la
+media di chi lavora cinque giorni su sette, e il confronto direbbe una cosa
+falsa.
+
+Lo **shutdown** riepiloga la giornata e poi fa la domanda scomoda, **una per
+ogni blocco rimasto indietro**: *Domani · In Lista · Fatto · Lascia perdere*.
+Nessun rinvio automatico, e un **tetto di tre riporti**: raggiunto il terzo,
+«Domani» si disattiva sugli altri. È la parte antipatica del rito ed è
+voluta — senza, lo shutdown diventerebbe un pulsante «sposta tutto a domani»
+e domani erediterebbe una giornata già persa. Chi sceglie «Domani» può
+chiedere all'AI **dove** metterli, e i suggerimenti fuori dagli spazi liberi
+li scarta la route prima ancora di mostrarli.
+
+Nessuno dei due si apre da solo. Una riga in cima al calendario invita al
+rito quando è il momento — mattina o sera — e si può togliere: un dialog che
+compare addosso appena si carica la pagina viene chiuso per riflesso.
+
+**Impostazioni**, cinque schede, tutte con salvataggio immediato: sono
+preferenze, non un modulo, e un pulsante «Salva» qui produrrebbe solo
+modifiche perse chiudendo la scheda.
+- *Giornata*: orari, fasce di picco e di calo, respiro fra i blocchi, tetto
+  giornaliero, micro-avvio, tema. Menu invece di campi liberi — un campo di
+  testo per «08:00» significa accettare «8», «8.00», «otto» e poi doverli
+  interpretare.
+- *Progetti*: creazione, rinomina in linea, colore dalla palette, archivio.
+  L'eliminazione dice **prima quanti task tocca** e cosa succede loro
+  (restano in Lista senza progetto).
+- *Ricorrenti*: quotidiane o su giorni scelti, con progetto, durata e orario.
+  Restano **modelli**: generare trenta occorrenze in anticipo riempirebbe il
+  futuro di blocchi e renderebbe ogni cambio d'orario una migrazione.
+- *Google*: account, calendari con colore, e l'interruttore di scrittura —
+  spento di default, con **conferma esplicita alla prima accensione**, perché
+  da quel momento un blocco spostato qui cambia un evento là, sotto gli occhi
+  di altre persone.
+- *Dati*: export e import JSON.
+
+**Export/import — `lib/backup.ts`, 11 test.** Il file non contiene `user_id`
+né i timestamp: un export deve poter rientrare in un altro account. L'import
+**aggiunge, non sostituisce** — sovrascrivere sarebbe l'operazione più
+distruttiva dell'app e non c'è modo di annullarla con un toast da cinque
+secondi — riusa gli id del file (così reimportarlo due volte non crea
+doppioni) e mostra il conteggio di ciò che sta per entrare prima di
+procedere. Un file scelto per sbaglio fallisce **in lettura**, con un
+messaggio, non a metà importazione.
+
+**Vista Settimana.** Non è la vista giorno moltiplicata per sette: niente
+trascinamento, niente resize. Serve a vedere la *forma* della settimana —
+dove si accumula, dove c'è aria — e per farlo deve stare in uno schermo. La
+finestra si allarga da sé se un blocco esce dagli orari di lavoro; toccare un
+giorno riporta alla vista giorno, che è dove si lavora.
+
+**293 test** in tutto.
+
+### Difetto trovato dallo screenshot
+Nella prima versione della settimana i blocchi erano tutti a larghezza piena:
+un task e una riunione Google sovrapposti si coprivano a vicenda, e in una
+colonna larga un settimo di schermo «coperto» vuol dire «sparito». Ora la
+settimana usa lo stesso `layoutOverlaps` della vista giorno, e i due si
+dividono la colonna.
+
+Corretta anche l'ennesima pluralizzazione italiana: «Rispondi a 1 blocchi» →
+«Rispondi all'ultimo blocco».
+
+### Verificato nel browser
+Vista settimana (totale corretto, zoom che sparisce perché non c'è niente da
+ingrandire, giorno cliccabile che riporta indietro), le cinque schede delle
+impostazioni, il kickoff con il riepilogo della giornata, e lo shutdown fino
+al tetto: al quarto blocco «Domani» risulta effettivamente disabilitato e il
+contatore segna «0 riporti su 3». Nessun errore in console.
+
+### Nota operativa
+`npm run build` mentre gira `next dev` sulla stessa cartella lascia il server
+di sviluppo con una `.next` che non è più la sua: le pagine cominciano a
+rispondere 404. È lo stesso inciampo del passo 11, in una forma diversa. Non
+è un difetto dell'app.
+
+### Resta da fare
+- Passo 13: stati vuoti rimanenti, undo dove manca, a11y, virtualizzazione
+  del calendario oltre le 200 righe, service worker PWA (che abiliterebbe
+  anche i pulsanti azione delle notifiche, rimandati dal passo 8).

@@ -54,6 +54,7 @@ type EventMap = {
   };
   "flusso:open-palette": Record<string, never>;
   "flusso:open-planner": Record<string, never>;
+  "flusso:open-kickoff": Record<string, never>;
   "flusso:open-shutdown": Record<string, never>;
 };
 

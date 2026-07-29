@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import { MagicCapture } from "@/components/ai/magic-capture";
 import { PlannerSheet } from "@/components/ai/planner-sheet";
 import { CalendarSection } from "@/components/calendar/calendar-section";
+import { KickoffSheet } from "@/components/rituals/kickoff-sheet";
+import { ShutdownSheet } from "@/components/rituals/shutdown-sheet";
+import { SettingsSheet } from "@/components/settings/settings-sheet";
 import { FlussoDndProvider } from "@/components/dnd/flusso-dnd";
 import { CalibrationSheet } from "@/components/calibration/calibration-sheet";
 import { FocusOverlay } from "@/components/focus/focus-overlay";
@@ -169,6 +172,9 @@ export function AppShell() {
         <FocusOverlay />
         <PostponeDialog />
         <CalibrationSheet />
+        <SettingsSheet />
+        <KickoffSheet />
+        <ShutdownSheet />
       </div>
     </FlussoDndProvider>
   );

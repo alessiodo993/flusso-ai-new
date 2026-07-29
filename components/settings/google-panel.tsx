@@ -1,0 +1,250 @@
+"use client";
+
+import { Loader2, Plus, RefreshCw, TriangleAlert } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { ToggleRow } from "@/components/ui/toggle-row";
+import { PROJECT_COLORS, safeColor } from "@/lib/colors";
+import {
+  useGoogleAccounts,
+  useGoogleCalendars,
+  useGoogleSync,
+  useUpdateGoogleCalendar,
+} from "@/lib/hooks/use-google";
+import { useSettings, useUpdateSettings } from "@/lib/hooks/use-settings";
+import { cn } from "@/lib/utils";
+
+/**
+ * Account e calendari Google.
+ *
+ * La scrittura verso Google è **spenta di default** e la prima accensione
+ * chiede conferma: da quel momento un blocco spostato qui cambia un evento
+ * là, e può finire sotto gli occhi di altre persone. Non è una preferenza
+ * come le altre.
+ */
+export function GooglePanel() {
+  const { accounts, needReconnect } = useGoogleAccounts();
+  const { calendars } = useGoogleCalendars();
+  const updateCalendar = useUpdateGoogleCalendar();
+  const { settings } = useSettings();
+  const updateSettings = useUpdateSettings();
+  const sync = useGoogleSync();
+
+  const [confirming, setConfirming] = useState(false);
+  const writeTarget = calendars.find((one) => one.is_write_target);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <a className="btn btn-soft" href="/api/google/connect">
+          <Plus className="size-4" />
+          {accounts.length === 0 ? "Collega Google" : "Aggiungi account"}
+        </a>
+
+        {accounts.length > 0 && (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => sync.mutate()}
+            disabled={sync.isPending}
+          >
+            {sync.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+            Aggiorna adesso
+          </button>
+        )}
+      </div>
+
+      {needReconnect.length > 0 && (
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-flusso-md border border-warn/30 bg-warn-soft p-3"
+        >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" />
+          <div className="min-w-0 flex-1 text-sm">
+            <p>
+              {needReconnect.length === 1
+                ? `L'accesso a ${needReconnect[0].email} è scaduto.`
+                : `${needReconnect.length} account vanno ricollegati.`}
+            </p>
+            <a className="btn btn-soft mt-2 h-8 px-2.5 text-xs" href="/api/google/connect">
+              Riconnetti
+            </a>
+          </div>
+        </div>
+      )}
+
+      {accounts.length === 0 ? (
+        <p className="py-2 text-sm text-ink-soft">
+          Senza un account collegato il calendario mostra solo i blocchi di
+          Flusso: le riunioni degli altri restano invisibili, e il planner le
+          ignora perché non le conosce.
+        </p>
+      ) : (
+        <>
+          <ul className="space-y-1">
+            {accounts.map((account) => (
+              <li
+                key={account.id}
+                className="flex items-center justify-between gap-2 text-sm"
+              >
+                <span className="truncate">{account.email}</span>
+                <span className="shrink-0 text-xs text-ink-faint">
+                  {
+                    calendars.filter(
+                      (one) => one.account_id === account.id && one.enabled,
+                    ).length
+                  }{" "}
+                  attivi
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <div>
+            <p className="label mb-1.5">Calendari</p>
+            <ul className="space-y-1.5">
+              {calendars.map((calendar) => (
+                <li
+                  key={calendar.id}
+                  className="rounded-flusso-md border border-line p-2.5"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="size-3 shrink-0 rounded-full"
+                      style={{ background: safeColor(calendar.color) }}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {calendar.name}
+                    </span>
+                    <input
+                      type="checkbox"
+                      className="size-5 shrink-0 accent-[var(--accent)]"
+                      checked={calendar.enabled}
+                      aria-label={`Mostra ${calendar.name} nel calendario`}
+                      onChange={(event) =>
+                        updateCalendar.mutate({
+                          id: calendar.id,
+                          enabled: event.target.checked,
+                        })
+                      }
+                    />
+                  </div>
+
+                  {calendar.enabled && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {PROJECT_COLORS.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          aria-label={`Colore ${color} per ${calendar.name}`}
+                          aria-pressed={safeColor(calendar.color) === color}
+                          onClick={() =>
+                            updateCalendar.mutate({ id: calendar.id, color })
+                          }
+                          className={cn(
+                            "size-6 rounded-full border-2",
+                            safeColor(calendar.color) === color
+                              ? "border-ink"
+                              : "border-transparent",
+                          )}
+                          style={{ background: color }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="hairline pt-3">
+            <ToggleRow
+              label="Scrivi i blocchi su Google"
+              hint={
+                settings.google_write_enabled
+                  ? writeTarget
+                    ? `I blocchi finiscono su «${writeTarget.name}».`
+                    : "Scegli sotto su quale calendario scriverli."
+                  : "Per ora Flusso legge soltanto."
+              }
+              checked={settings.google_write_enabled}
+              onCheckedChange={(next) => {
+                if (!next) {
+                  updateSettings.mutate({ google_write_enabled: false });
+                  return;
+                }
+                // Prima accensione: la conferma è esplicita perché da qui in
+                // poi le modifiche escono da Flusso.
+                setConfirming(true);
+              }}
+            />
+
+            {confirming && (
+              <div className="mt-2 rounded-flusso-md border border-line bg-sunken p-3">
+                <p className="text-sm">
+                  Da adesso ogni blocco pianificato, spostato o completato
+                  cambierà anche l&apos;evento corrispondente su Google, visibile
+                  a chi ha accesso a quel calendario. Confermi?
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-soft h-8 flex-1 text-xs"
+                    onClick={() => setConfirming(false)}
+                  >
+                    No, resto in lettura
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary h-8 flex-1 text-xs"
+                    onClick={() => {
+                      updateSettings.mutate({ google_write_enabled: true });
+                      setConfirming(false);
+                      if (!writeTarget) {
+                        toast("Scegli su quale calendario scrivere.");
+                      }
+                    }}
+                  >
+                    Sì, scrivi su Google
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {settings.google_write_enabled && (
+              <ul className="mt-2 space-y-1">
+                {calendars
+                  .filter((one) => one.enabled)
+                  .map((calendar) => (
+                    <li key={calendar.id}>
+                      <label className="flex min-h-11 items-center gap-2.5 text-sm">
+                        <input
+                          type="radio"
+                          name="write-target"
+                          className="size-4 accent-[var(--accent)]"
+                          checked={calendar.is_write_target}
+                          onChange={() =>
+                            updateCalendar.mutate({
+                              id: calendar.id,
+                              is_write_target: true,
+                            })
+                          }
+                        />
+                        <span className="truncate">{calendar.name}</span>
+                      </label>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
