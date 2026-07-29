@@ -38,7 +38,7 @@
   --radius-sm: 10px;
   --radius-lg: 20px;
 
-  --header-h: 3.5rem;
+  --header-h: 4rem;
   --bottom-nav-h: 4.25rem;
 }
 
@@ -91,6 +91,13 @@
   --radius-flusso: var(--radius);
   --radius-flusso-sm: var(--radius-sm);
   --radius-flusso-lg: var(--radius-lg);
+
+  /*
+   * Il passaggio a due colonne avviene a 1080px e non a un breakpoint
+   * standard: sotto quella soglia la colonna del calendario diventa troppo
+   * stretta perché un blocco resti leggibile.
+   */
+  --breakpoint-app: 1080px;
 }
 
 /* Il tema è sempre risolto su <html data-theme>, mai lasciato a "auto":
@@ -376,7 +383,70 @@
   }
 }
 
+/* Animazioni dei layer Radix: 150–200ms, ease-out, e nulla di più. */
+@keyframes flusso-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes flusso-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes flusso-slide-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes flusso-slide-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes flusso-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@keyframes flusso-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
 @layer utilities {
+  .anim-overlay[data-state="open"] {
+    animation: flusso-fade-in 150ms ease-out;
+  }
+
+  .anim-overlay[data-state="closed"] {
+    animation: flusso-fade-out 150ms ease-out;
+  }
+
+  .anim-sheet[data-state="open"] {
+    animation: flusso-slide-up 200ms ease-out;
+  }
+
+  .anim-sheet[data-state="closed"] {
+    animation: flusso-slide-down 150ms ease-out;
+  }
+
+  .anim-pop[data-state="open"] {
+    animation: flusso-pop-in 150ms ease-out;
+  }
+
+  .anim-pop[data-state="closed"] {
+    animation: flusso-pop-out 120ms ease-out;
+  }
+
   .tnum {
     font-variant-numeric: tabular-nums;
   }

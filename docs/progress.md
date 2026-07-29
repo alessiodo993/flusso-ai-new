@@ -8,7 +8,7 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 | 1 | Scaffold, token CSS, Supabase Auth, middleware, login | ✅ fatto |
 | 2 | Migrazione DB completa (RLS, GRANT, trigger) | ✅ fatto |
 | 3 | Tipi, client Supabase, hook CRUD base | ✅ fatto |
-| 4 | Shell `/app` | ⏳ |
+| 4 | Shell `/app` | ✅ fatto |
 | 5 | Idee, Lista, TaskCard, TaskSheet | ⏳ |
 | 6 | Calendario giorno | ⏳ |
 | 7 | Google Calendar | ⏳ |
@@ -207,3 +207,53 @@ PostgreSQL senza dipendere dal cloud.
 
 ### Resta da fare
 - La shell `/app` che userà questi hook: passo 4.
+
+---
+
+## Passo 4 — Shell `/app`
+
+### Fatto
+
+- **Layout deciso dal CSS, non da JavaScript.** Su telefono si vede una
+  sezione per volta; da **1080px** (breakpoint `app:`, definito apposta perché
+  sotto quella soglia la colonna del calendario diventa illeggibile) compaiono
+  le due colonne **5fr / 7fr**, entrambe con `min-w-0`, `sticky top-16`,
+  `max-h-[calc(100vh-5rem)]` e **scorrimenti indipendenti**. Nessun ramo di
+  rendering dipende dalla larghezza misurata a runtime, quindi non c'è nulla
+  da riconciliare all'idratazione e non si vede alcun salto al primo render.
+- **Collapse** della colonna sinistra → il calendario si centra a 880px e
+  compare un pulsante flottante per riaprirla. Su **Obiettivi** il calendario
+  si ritira e la griglia passa a una colonna sola.
+- **Header**: cerchio verde, data compatta (`mer 29 lug`), badge **«N in
+  scadenza»** che apre la Lista già filtrata, aggiornamento calendari,
+  tema, impostazioni.
+- **BottomNav** a cinque slot con **▶ Adesso rialzato al centro**, più il FAB
+  di cattura rapida sopra la barra, a destra, dove arriva il pollice.
+- **Command palette ⌘K**: navigazione, Adesso, nuovo task, nuova idea, cattura
+  a voce, pianifica con AI, shutdown, tema, impostazioni. Frecce e Invio,
+  focus che va al campo e non al primo elemento navigabile.
+- **`lib/events.ts`**: gli eventi cross-sezione tipizzati (`flusso:goto`,
+  `flusso:focus-now`, `flusso:focus-project`, più cattura, planner, shutdown,
+  impostazioni, palette) con l'hook `useFlussoEvent`. Le sezioni non si
+  conoscono fra loro.
+- **`ResponsiveSheet`**: bottom-sheet su telefono, dialog centrato da desktop,
+  con titolo e descrizione sempre presenti per gli screen reader.
+- `EmptyState` riusabile: ogni schermata vuota dice cosa succede e offre
+  l'azione successiva.
+- Le quattro sezioni sono in piedi come contenitori con il loro stato vuoto;
+  il contenuto arriva ai passi 5, 6 e 11.
+
+**Verifica**: `npm run shots` fa uno screenshot di app desktop, app mobile,
+landing e login e fallisce se la console riporta errori veri. Il layout a due
+colonne, la BottomNav e il FAB sono stati controllati così. La pagina
+`/anteprima` monta la shell senza sessione ed è disattivata in produzione.
+
+### Scelte da segnalare
+- **Si apre sul calendario**, non sulla Lista: se non è lì, non succede.
+- Il selettore `Idee | Lista | Obiettivi` esiste **solo da desktop**: sul
+  telefono lo stesso compito ce l'ha la BottomNav, e due controlli per la
+  stessa cosa sarebbero rumore.
+- La sezione attiva **non è ancora persistita** fra un accesso e l'altro.
+
+### Resta da fare
+- Contenuti di Idee e Lista: passo 5.
