@@ -11,6 +11,20 @@ const compat = new FlatCompat({
 const eslintConfig = [
   { ignores: [".next/**", "out/**", "build/**", "next-env.d.ts"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      // Il trattino basso segnala una variabile scartata di proposito:
+      // serve a togliere una chiave da un oggetto con il destructuring.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

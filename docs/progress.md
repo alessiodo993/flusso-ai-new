@@ -9,7 +9,7 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 | 2 | Migrazione DB completa (RLS, GRANT, trigger) | ✅ fatto |
 | 3 | Tipi, client Supabase, hook CRUD base | ✅ fatto |
 | 4 | Shell `/app` | ✅ fatto |
-| 5 | Idee, Lista, TaskCard, TaskSheet | ⏳ |
+| 5 | Idee, Lista, TaskCard, TaskSheet | ✅ fatto |
 | 6 | Calendario giorno | ⏳ |
 | 7 | Google Calendar | ⏳ |
 | 8 | Focus Mode | ⏳ |
@@ -257,3 +257,77 @@ colonne, la BottomNav e il FAB sono stati controllati così. La pagina
 
 ### Resta da fare
 - Contenuti di Idee e Lista: passo 5.
+
+---
+
+## Passo 5 — Idee, Lista, TaskCard, TaskSheet
+
+### Fatto
+
+**Pezzi condivisi, estratti da subito come chiede la specifica**
+- `TaskMetaChips` — scadenza col semaforo (rossa se scaduta o in giornata,
+  ambra entro due giorni, neutra oltre), stima, energia, contatore sottotask
+  `2/3`, badge `↺N` dal secondo rinvio. Le stesse chip serviranno ai blocchi
+  del calendario: tre copie divergerebbero al primo ritocco.
+- `useTaskQuickActions` — fatto, focus, pianifica, riporta in Lista, highlight,
+  elimina con annullamento. Un solo posto in cui «Fatto» è definito.
+- `ItemMenu` — **tasto destro su desktop, pressione prolungata su touch**, con
+  il menu contestuale nativo soppresso di proposito: comparire *insieme*
+  all'action sheet è il modo più rapido per rendere una card inutilizzabile
+  con il pollice.
+- `CaptureBar` in due forme, `SelectionBar`, `SelectField`, `EmptyState`.
+
+**Idee**
+- Cattura pura: `Invio` salva e **rimette il cursore nel campo**; il progetto
+  resta selezionato, perché chi cattura a raffica di solito non lo cambia.
+- Riordino trascinabile con **maniglia dedicata** e `sort_order` frazionario:
+  spostare riscrive una sola riga.
+- Promuovi a Lista, elimina, selezione multipla e azioni in blocco — tutte con
+  **«Annulla»** che disfa entrambi i lati (il task creato sparisce, l'idea
+  torna con lo stesso id).
+
+**Lista**
+- Ordinamenti **Progetto** (default, gruppi collassabili ordinati per
+  scadenza), **Scadenza**, **Manuale**; filtri per progetto, energia e
+  «in scadenza», che è anche ciò che apre il badge dell'header.
+- `TaskCard` mostra tutto senza aprire nulla: barra del colore del progetto,
+  titolo, chip, stella dell'highlight, pulsante di pianificazione, checkbox,
+  cestino.
+- **Clic singolo apre la scheda, doppio clic rinomina.** La distinzione vive in
+  `useClickOrDouble`: senza quell'attesa il primo dei due clic aprirebbe
+  sempre la scheda e la rinomina sarebbe irraggiungibile.
+- Azioni in blocco: progetto, energia, pianifica, elimina.
+
+**TaskSheet e ScheduleSheet**
+- Scheda con stella accanto al titolo, note, progetto, energia, stima,
+  scadenza, **sottotask riordinabili e con scadenza propria**, storico di
+  esecuzione (stimato contro reale, rinvii, prima pianificazione) e le CTA
+  Fatto · In Lista · Sposta a… · Avvia focus · Elimina. Ogni campo salva da
+  sé: non c'è un momento in cui una modifica smette di valere.
+- `ScheduleSheet` con giorno rapido, durata e griglia di orari: gli slot già
+  occupati restano cliccabili ma marcati, perché sovrapporre a volte è quello
+  che si vuole e nasconderli renderebbe solo più difficile capire perché un
+  orario è sparito.
+
+**Verifica**
+- `lib/list-view.ts` — filtri, ordinamenti e raggruppamento sono una **funzione
+  pura**, non un calcolo dentro al componente: è dove si annidano gli errori
+  silenziosi di ordinamento. **14 test** dedicati, 85 in tutto.
+- `/anteprima` monta la shell con dati finti (`components/dev/demo-data.tsx`),
+  così le sezioni piene si possono guardare davvero. Screenshot verificati su
+  Lista desktop, Lista mobile, Idee e TaskSheet.
+
+### Scelte da segnalare
+- **I completati scendono in fondo al gruppo invece di sparire**: la spunta
+  deve poter essere annullata guardandola.
+- **I task senza scadenza vanno in fondo, non in cima**: una scadenza assente
+  non è urgentissima, è assente.
+- I dettagli della cattura in Lista **compaiono solo dopo aver scritto
+  qualcosa**: prima sarebbero cinque campi vuoti a guardia di un pensiero di
+  tre parole.
+
+### Resta da fare
+- Il trascinamento **da Idee o Lista verso uno slot del calendario** arriva col
+  passo 6, insieme alla griglia che fa da bersaglio.
+- La bacchetta AI emette già il suo evento ma la cattura magica vera è al
+  passo 10.

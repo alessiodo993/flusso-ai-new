@@ -18,17 +18,30 @@ export function orderBetween(
 }
 
 /**
- * Ricalcola il `sort_order` di un elemento spostato in una lista già ordinata.
- * `toIndex` è la posizione finale, come la intende `arrayMove`.
+ * I due vicini fra cui l'elemento finisce dopo lo spostamento. `toIndex` è la
+ * posizione finale, come la intende `arrayMove`: l'elemento trascinato va
+ * tolto dalla lista prima di guardarsi intorno, altrimenti farebbe da vicino
+ * di se stesso.
  */
+export function neighboursForMove(
+  ordered: Array<{ sort_order: number }>,
+  fromIndex: number,
+  toIndex: number,
+): { before: number | null; after: number | null } {
+  const without = ordered.filter((_, index) => index !== fromIndex);
+  return {
+    before: without[toIndex - 1]?.sort_order ?? null,
+    after: without[toIndex]?.sort_order ?? null,
+  };
+}
+
+/** Il `sort_order` da scrivere per un elemento spostato. */
 export function orderForMove(
   ordered: Array<{ sort_order: number }>,
   fromIndex: number,
   toIndex: number,
 ): number {
-  const without = ordered.filter((_, index) => index !== fromIndex);
-  const before = without[toIndex - 1]?.sort_order ?? null;
-  const after = without[toIndex]?.sort_order ?? null;
+  const { before, after } = neighboursForMove(ordered, fromIndex, toIndex);
   return orderBetween(before, after);
 }
 

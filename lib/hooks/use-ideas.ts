@@ -11,7 +11,7 @@ import {
 } from "@/lib/hooks/use-optimistic";
 import { orderBetween } from "@/lib/sort-order";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import type { Idea } from "@/lib/types";
+import { toTask, type Idea, type Task } from "@/lib/types";
 import { uid } from "@/lib/utils";
 
 async function fetchIdeas(): Promise<Idea[]> {
@@ -105,6 +105,70 @@ export function useDeleteIdeas() {
     },
     optimistic(current, { ids }) {
       return removeByIds(current, ids);
+    },
+  });
+}
+
+/** Rimette in vita delle idee eliminate, con lo stesso id: serve all'«Annulla». */
+export function useRestoreIdeas() {
+  return useOptimisticMutation<{ ideas: Idea[] }, void, Idea[]>({
+    key: qk.ideas,
+    errorMessage: "Non è stato possibile annullare.",
+    async mutationFn({ ideas }) {
+      const { error } = await supabaseBrowser()
+        .from("ideas")
+        .insert(ideas.map(({ user_id: _user, ...idea }) => idea));
+      if (error) throw error;
+    },
+    optimistic(current, { ideas }) {
+      return [...ideas, ...(current ?? [])]
+        .slice()
+        .sort((a, b) => a.sort_order - b.sort_order);
+    },
+  });
+}
+
+/**
+ * Promuove delle idee a task: le crea in Lista e le toglie da Idee.
+ *
+ * Restituisce i task creati perché chi chiama possa offrire l'annullamento,
+ * che deve saper cancellare esattamente quelli.
+ */
+export function usePromoteIdeas() {
+  return useOptimisticMutation<{ ideas: Idea[] }, Task[], Idea[]>({
+    key: qk.ideas,
+    alsoInvalidate: [qk.tasks],
+    errorMessage: "Non è stato possibile promuovere.",
+    async mutationFn({ ideas }) {
+      const supabase = supabaseBrowser();
+
+      const { data, error } = await supabase
+        .from("tasks")
+        .insert(
+          ideas.map((idea) => ({
+            title: idea.title,
+            project_id: idea.project_id,
+          })),
+        )
+        .select();
+      if (error) throw error;
+
+      const { error: deleteError } = await supabase
+        .from("ideas")
+        .delete()
+        .in(
+          "id",
+          ideas.map((idea) => idea.id),
+        );
+      if (deleteError) throw deleteError;
+
+      return (data ?? []).map(toTask);
+    },
+    optimistic(current, { ideas }) {
+      return removeByIds(
+        current,
+        ideas.map((idea) => idea.id),
+      );
     },
   });
 }

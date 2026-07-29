@@ -241,6 +241,33 @@ export function useDeleteTasks() {
   });
 }
 
+/**
+ * Rimette in vita dei task appena eliminati, **con lo stesso id**.
+ *
+ * È ciò che rende reale l'«Annulla» del toast: ricreare righe nuove
+ * spezzerebbe le sessioni di focus e i riferimenti già scritti altrove.
+ */
+export function useRestoreTasks() {
+  return useOptimisticMutation<{ tasks: Task[] }, void, Task[]>({
+    key: qk.tasks,
+    errorMessage: "Non è stato possibile annullare l'eliminazione.",
+    async mutationFn({ tasks }) {
+      const { error } = await supabaseBrowser()
+        .from("tasks")
+        .insert(
+          tasks.map(({ user_id: _user, ...task }) => ({
+            ...task,
+            subtasks: task.subtasks,
+          })),
+        );
+      if (error) throw error;
+    },
+    optimistic(current, { tasks }) {
+      return [...tasks, ...(current ?? [])];
+    },
+  });
+}
+
 /** Modifiche in blocco dalla selezione multipla della Lista. */
 export function useBulkUpdateTasks() {
   return useOptimisticMutation<
