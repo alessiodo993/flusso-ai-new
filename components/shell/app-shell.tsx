@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { CalendarSection } from "@/components/calendar/calendar-section";
 import { FlussoDndProvider } from "@/components/dnd/flusso-dnd";
+import { FocusOverlay } from "@/components/focus/focus-overlay";
 import { IdeasSection } from "@/components/ideas/ideas-section";
 import { ListSection } from "@/components/list/list-section";
 import { OkrSection } from "@/components/okr/okr-section";
@@ -155,6 +156,7 @@ export function AppShell() {
         <BottomNav section={section} onSelect={setSection} />
         <QuickCaptureFab />
         <CommandPalette />
+        <FocusOverlay />
       </div>
     </FlussoDndProvider>
   );

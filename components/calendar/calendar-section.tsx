@@ -7,6 +7,7 @@ import { DayGrid } from "@/components/calendar/day-grid";
 import { DayStrip } from "@/components/calendar/day-strip";
 import { AllDayStrip } from "@/components/calendar/google-event-block";
 import { GoogleReconnectBanner } from "@/components/calendar/google-reconnect-banner";
+import { NotificationOptIn } from "@/components/calendar/notification-opt-in";
 import { ScheduleSheet } from "@/components/list/schedule-sheet";
 import { TaskSheet } from "@/components/list/task-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -40,7 +41,7 @@ export function CalendarSection() {
   const [zoom, setZoom] = useState<Zoom | null>(null);
 
   const { settings } = useSettings();
-  const { byDay } = useTasks();
+  const { tasks, byDay } = useTasks();
   const { byId: projectsById } = useProjects();
   const { forDay } = useBlocks();
   const { byDay: googleByDay } = useGoogleEvents();
@@ -131,6 +132,7 @@ export function CalendarSection() {
       </div>
 
       <GoogleReconnectBanner />
+      <NotificationOptIn tasks={tasks} />
 
       {scheduled.length === 0 && fixed.length === 0 && googleEvents.length === 0 ? (
         <EmptyState

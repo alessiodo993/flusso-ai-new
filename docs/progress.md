@@ -12,7 +12,7 @@ Stato della ricostruzione, passo per passo. La specifica di riferimento è
 | 5 | Idee, Lista, TaskCard, TaskSheet | ✅ fatto |
 | 6 | Calendario giorno | ✅ fatto |
 | 7 | Google Calendar | ✅ fatto |
-| 8 | Focus Mode | ⏳ |
+| 8 | Focus Mode | ✅ fatto |
 | 9 | Calibrazione, rinvii, decay, Highlight | ⏳ |
 | 10 | AI (cattura, planner, OKR) | ⏳ |
 | 11 | OKR e dashboard ritmo | ⏳ |
@@ -534,3 +534,72 @@ per `anon`, negavano ogni riga, e un inserimento anonimo veniva respinto con
   Supabase**. Senza, i test giravano su uno schema più pulito di quello vero.
   Verificato per controprova: con sole `0001` e `0002` il test fallisce con
   «anon può leggere projects»; con la `0003` torna verde.
+
+---
+
+## Passo 8 — Focus Mode
+
+### Fatto
+
+**Il cronometro**
+- `useFocusTimer` somma **intervalli davvero trascorsi in esecuzione**, invece
+  di sottrarre due orologi: mettere in pausa e tornare mezz'ora dopo non brucia
+  mezz'ora di sessione. Verificato in browser — 3 secondi di pausa e il
+  countdown non si muove di un secondo, poi riparte alla ripresa.
+- Legge l'orologio a ogni tick invece di contare i tick: un contatore
+  incrementale perderebbe tempo quando la scheda passa in secondo piano, e la
+  sessione finirebbe in ritardo.
+- A tempo scaduto si ferma da sé e lo segnala, invece di andare in negativo.
+
+**La schermata**
+- Overlay a schermo intero sopra tutto, sfondo `--bg`. È l'unico posto
+  dell'app che **toglie** invece di aggiungere.
+- Anello SVG `r=84` con `strokeDasharray = 2πr`, countdown in font display.
+- Sopra il titolo: pallino del progetto e, se esiste un OKR di quel progetto
+  nel trimestre corrente, la riga **«Questo blocco avanza: {KR meno
+  avanzato}»** — il solo punto in cui la strategia tocca l'esecuzione.
+- Sottotask spuntabili inline, o le note se non ce ne sono.
+- `Esc` chiude, barra spaziatrice mette in pausa.
+
+**Le regole di fine**
+- Dialog **Ho finito / +15 minuti / Continuo più tardi**, senza chiusura
+  implicita: la scelta la fa la persona. «Continuo più tardi» è l'ultima e la
+  meno vistosa di proposito, ed è l'unica che riporta il task in Lista senza
+  giorno né orario.
+- **Micro-avvio**: mostra **un solo** sottotask aperto — guardarne cinque è già
+  una ragione per rimandare — e allo scadere chiede *«Ottimo, sei partito.
+  Vuoi continuare?»* con il doppio dei minuti.
+- **+15 minuti**: se lo slot successivo è occupato allunga **solo il timer** e
+  lo dice con un toast. Allungare il blocco ci passerebbe sopra, e il
+  calendario mentirebbe.
+- A blocco completato, se un OKR è collegato, compare il prompt di
+  aggiornamento del KR con `−`/`+` di passo `max(1, target/20)`.
+
+**Sessioni e avvisi**
+- La riga in `focus_sessions` si scrive **all'avvio**, non alla fine: se la
+  scheda si chiude a metà, meglio una sessione senza esito che nessuna traccia
+  di un'ora di lavoro. Alla chiusura si aggiornano durata reale, secondi di
+  pausa, esito e — se sono stati aggiunti dei +15 — anche il piano, altrimenti
+  la calibrazione confronterebbe numeri sbagliati.
+- Notifiche all'inizio di ogni blocco, con un timer per blocco invece di un
+  intervallo che controlla l'orologio: così l'avviso arriva al minuto esatto.
+- Il permesso **non si chiede al primo caricamento**. Una richiesta che arriva
+  prima di aver capito cosa fa l'app viene negata per riflesso, e negata resta
+  — il browser non la ripropone. Compare invece una riga discreta nel
+  calendario, e **solo dopo** che c'è almeno un blocco pianificato.
+
+**Ingressi**: `▶ Adesso` nella BottomNav, `▶` sui blocchi, command palette.
+`resolveFocusTarget` risolve blocco in corso → prossimo → primo rimasto, con
+**10 test**: a giornata finita propone comunque il primo rimasto, perché la
+risposta utile è ciò che è rimasto indietro, non «niente». **159 test** in
+tutto.
+
+### Scelte da segnalare
+- **Le notifiche non hanno pulsanti «Inizia» / «Rimanda 15 min».** Le azioni
+  nelle notifiche richiedono un service worker, che l'app non ha ancora. Il
+  clic sulla notifica apre direttamente il focus su quel blocco, che copre il
+  caso principale. I pulsanti arriveranno col service worker della PWA, al
+  passo 13.
+
+### Resta da fare
+- Calibrazione, dialogo del terzo rinvio e decay: passo 9.
