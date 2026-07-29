@@ -47,6 +47,8 @@ export function DayGrid({
   bufferMinutes,
   workStart,
   workEnd,
+  peakStart,
+  peakEnd,
   onOpenTask,
   onToggleDone,
   onStartFocus,
@@ -64,6 +66,9 @@ export function DayGrid({
   bufferMinutes: number;
   workStart: number;
   workEnd: number;
+  /** La fascia in cui l'utente rende di più, in minuti dalla mezzanotte. */
+  peakStart: number | null;
+  peakEnd: number | null;
   onOpenTask: (task: Task) => void;
   onToggleDone: (task: Task) => void;
   onStartFocus: (task: Task) => void;
@@ -160,6 +165,30 @@ export function DayGrid({
             />
           );
         })}
+
+        {/*
+          La fascia di picco: lo sfondo appena più caldo, come le ore
+          lavorative in Google Calendar. È un'informazione che serve **mentre**
+          si trascina — «questo pezzo di giornata rende più degli altri» — e per
+          questo va nel calendario e non in una spiegazione altrove. Sta sotto
+          tutto il resto e non intercetta il puntatore: non deve mai rubare un
+          drop al blocco che copre.
+        */}
+        {peakStart !== null &&
+          peakEnd !== null &&
+          peakEnd > view.start &&
+          peakStart < view.end && (
+            <div
+              aria-hidden="true"
+              style={{
+                top: (Math.max(peakStart, view.start) - view.start) * px,
+                height:
+                  (Math.min(peakEnd, view.end) - Math.max(peakStart, view.start)) *
+                  px,
+              }}
+              className="pointer-events-none absolute inset-x-0 bg-accent-soft"
+            />
+          )}
 
         {/* Fuori orario di lavoro: sfondo più cupo, senza scritte. */}
         {view.start < workStart && (

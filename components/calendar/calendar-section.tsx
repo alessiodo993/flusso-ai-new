@@ -28,6 +28,7 @@ import { useTaskQuickActions } from "@/lib/hooks/use-task-quick-actions";
 import { useScheduleTask, useTasks, useUpdateTask } from "@/lib/hooks/use-tasks";
 import { fmtDayLong, fmtDayShort, fmtDuration, todayISO, type DayISO } from "@/lib/time";
 import { moveTask } from "@/lib/postpone";
+import { timeToMinutes } from "@/lib/planner";
 import { isScheduled, type Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -202,6 +203,8 @@ export function CalendarSection() {
             bufferMinutes={settings.buffer_minutes}
             workStart={settings.work_start}
             workEnd={settings.work_end}
+            peakStart={timeToMinutes(settings.peak_hours_start)}
+            peakEnd={timeToMinutes(settings.peak_hours_end)}
             onOpenTask={setOpenTask}
             onToggleDone={actions.toggleDone}
             onStartFocus={actions.startFocus}

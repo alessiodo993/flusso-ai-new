@@ -15,7 +15,7 @@ const NO_PROJECT = "senza-progetto";
 /**
  * Quello che la Lista mostra: aperto e non ancora sul calendario.
  *
- * Restano fuori sia gli archiviati sia quelli **da rivedere**: questi ultimi
+ * Restano fuori sia gli archiviati sia quelli **in dubbio**: questi ultimi
  * hanno una sezione tutta loro in fondo, e mostrarli anche qui li farebbe
  * comparire due volte — esattamente il rumore che la sezione doveva togliere.
  */

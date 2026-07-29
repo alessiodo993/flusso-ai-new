@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 
+import { capExplanation, realisticCap } from "@/lib/calibration";
 import { useBlocks } from "@/lib/hooks/use-blocks";
 import { useCalibration } from "@/lib/hooks/use-calibration";
 import { useGoogleEvents } from "@/lib/hooks/use-google";
@@ -32,21 +33,32 @@ export function usePlannerContext() {
   const { byDay } = useTasks();
   const { forDay } = useBlocks();
   const { byDay: googleByDay } = useGoogleEvents();
-  const { coefficient } = useCalibration();
+  const { coefficient, series } = useCalibration();
   const { okrs } = useOkrs(currentQuarter());
+
+  /*
+   * Il tetto **non** è quello delle impostazioni: è quello che l'utente
+   * completa davvero, più un margine del 15%. Le impostazioni restano un
+   * limite superiore — chi vuole pianificare meno di quanto riesce a fare
+   * deve poterlo dire — ma non un obiettivo da riempire.
+   */
+  const cap = useMemo(
+    () => realisticCap(series, settings.daily_cap_minutes),
+    [series, settings.daily_cap_minutes],
+  );
 
   const plannerSettings = useMemo<PlannerSettings>(
     () => ({
       workStart: settings.work_start,
       workEnd: settings.work_end,
       bufferMinutes: settings.buffer_minutes,
-      dailyCapMinutes: settings.daily_cap_minutes,
+      dailyCapMinutes: cap.minutes,
       peakStart: timeToMinutes(settings.peak_hours_start),
       peakEnd: timeToMinutes(settings.peak_hours_end),
       lowStart: timeToMinutes(settings.low_hours_start),
       lowEnd: timeToMinutes(settings.low_hours_end),
     }),
-    [settings],
+    [cap.minutes, settings],
   );
 
   /**
@@ -134,6 +146,9 @@ export function usePlannerContext() {
 
   return {
     settings: plannerSettings,
+    cap,
+    /** La frase che spiega il tetto, se c'è qualcosa da spiegare. */
+    capMessage: capExplanation(cap),
     coefficient,
     contextsFor,
     minutesAvailable,

@@ -28,7 +28,7 @@ import {
   shutdownSummary,
   type PendingChoice,
 } from "@/lib/rituals";
-import { addDaysISO, fmtMin, todayISO } from "@/lib/time";
+import { addDaysISO, fmtDuration, fmtMin, todayISO } from "@/lib/time";
 import { isScheduled } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -36,8 +36,16 @@ const CHOICES: Array<{ id: PendingChoice; label: string }> = [
   { id: "domani", label: "Domani" },
   { id: "lista", label: "In Lista" },
   { id: "fatto", label: "Fatto" },
+  // «Ridimensiona» è la risposta onesta al caso più comune: il task non era
+  // troppo difficile, era troppo grosso. Torna in Lista già più corto.
+  { id: "ridimensiona", label: "Ridimensiona" },
   { id: "elimina", label: "Lascia perdere" },
 ];
+
+/** Di quanto si accorcia un task ridimensionato, al minimo un quarto d'ora. */
+function shrunk(minutes: number | null): number {
+  return Math.max(15, Math.round(((minutes ?? 30) / 2) / 5) * 5);
+}
 
 /**
  * Il rito della sera.
@@ -128,6 +136,14 @@ export function ShutdownSheet() {
       } else if (choice === "elimina") {
         await remove.mutateAsync({ ids: [task.id] });
       } else if (choice === "lista") {
+        await unschedule.mutateAsync({ id: task.id });
+      } else if (choice === "ridimensiona") {
+        // Torna in Lista con la stima dimezzata: la prossima volta chiede
+        // metà del tempo, che è di solito ciò che serve perché parta.
+        await update.mutateAsync({
+          id: task.id,
+          est_minutes: shrunk(task.est_minutes),
+        });
         await unschedule.mutateAsync({ id: task.id });
       } else {
         const suggested = suggestions.find((one) => one.taskId === task.id);
@@ -266,6 +282,13 @@ export function ShutdownSheet() {
                         );
                       })}
                     </div>
+
+                    {choice === "ridimensiona" && (
+                      <p className="mt-1.5 text-xs text-ink-faint">
+                        Torna in Lista da {fmtDuration(shrunk(task.est_minutes))}
+                        , invece di {fmtDuration(task.est_minutes)}.
+                      </p>
+                    )}
 
                     {suggested && choice === "domani" && (
                       <p className="mt-1.5 text-xs text-ink-faint">

@@ -4,6 +4,11 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 
 import { useFlussoEvent } from "@/lib/events";
+import {
+  readSnoozeLog,
+  withSnooze,
+  writeSnoozeLog,
+} from "@/lib/snooze";
 import { useScheduleTask, useTasks } from "@/lib/hooks/use-tasks";
 import { fmtMin, snap, DAY_MINUTES } from "@/lib/time";
 import { isScheduled } from "@/lib/types";
@@ -41,6 +46,10 @@ export function useSnooze() {
           startMinute: start,
           estMinutes: task.est_minutes,
         });
+
+        // Il conteggio serve alla notifica dopo, per sapere se offrire ancora
+        // il quarto d'ora o chiedere una decisione.
+        writeSnoozeLog(withSnooze(readSnoozeLog(), task.day, task.id));
         toast(`«${task.title}» alle ${fmtMin(start)}.`);
       },
       [byId, schedule],

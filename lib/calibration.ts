@@ -1,4 +1,10 @@
-import { addDaysISO, toRomeDay, todayISO, type DayISO } from "@/lib/time";
+import {
+  addDaysISO,
+  fmtDuration,
+  toRomeDay,
+  todayISO,
+  type DayISO,
+} from "@/lib/time";
 import type { FocusSession, Task } from "@/lib/types";
 
 /**
@@ -19,6 +25,15 @@ export const WINDOW = 30;
  * numero: verrebbe creduto.
  */
 export const MIN_SESSIONS = 5;
+
+/**
+ * Quante sessioni servono prima di **mostrare la correzione su un task**.
+ *
+ * Più delle cinque che bastano a calcolare il coefficiente, perché qui il
+ * numero non riassume un andamento: contraddice la stima che l'utente ha
+ * appena scelto. Per farlo, deve avere ragione.
+ */
+export const MIN_SESSIONS_TO_SHOW = 10;
 
 /**
  * Ogni rapporto viene limitato a questo intervallo prima della media. Una
@@ -159,7 +174,7 @@ export function mostPostponed(tasks: Task[], limit = 5): Task[] {
 export const DECAY_DAYS = 21;
 
 /**
- * I task da rivedere: mai finiti sul calendario da tre settimane.
+ * I task in dubbio: mai finiti sul calendario da tre settimane.
  *
  * Il criterio è `first_planned_at`, non la data di creazione: un task che è
  * stato pianificato una volta e poi rimandato non è dimenticato — è un
@@ -176,4 +191,118 @@ export function isStale(
   if (!createdDay) return false;
 
   return createdDay <= addDaysISO(today, -DECAY_DAYS);
+}
+
+// ---------------------------------------------------------------------------
+// Il tetto realistico della giornata
+// ---------------------------------------------------------------------------
+
+/** Il massimo assoluto: sei ore di lavoro profondo sono già molte. */
+export const CAP_CEILING = 360;
+
+/**
+ * Il tetto per chi non ha ancora storico. Quattro ore, non sei: un utente
+ * nuovo non ha idea di quanto riesca a fare, e la prima giornata pianificata
+ * troppo piena è anche la prima delusione — quella che fa smettere.
+ */
+export const CAP_COLD_START = 240;
+
+/**
+ * Di quanto si può chiedere più di quello che si è fatto finora.
+ *
+ * Il 15% è uno strappo, non un salto: abbastanza per crescere, poco perché il
+ * piano resti credibile. Senza margine il tetto inseguirebbe la media al
+ * ribasso e si stringerebbe da solo giorno per giorno.
+ */
+export const CAP_STRETCH = 1.15;
+
+export type Cap = {
+  minutes: number;
+  /** Da cosa deriva: serve a spiegarlo all'utente, non a decorare. */
+  source: "storico" | "nuovo" | "impostazioni";
+  /** La media su cui si basa, `null` se non c'è. */
+  typicalMinutes: number | null;
+};
+
+/**
+ * Quante ore si possono davvero pianificare in un giorno.
+ *
+ * La specifica lo dice in una riga — `min(6h, media completata × 1.15)` — ma
+ * la parte che conta è **quali giorni entrano nella media**: solo quelli in
+ * cui c'era qualcosa in programma. Contare anche le domeniche vuote
+ * abbasserebbe la media di chi lavora cinque giorni su sette, e il tetto
+ * stringerebbe le giornate lavorative per colpa dei giorni di riposo.
+ */
+export function realisticCap(
+  series: DayTotals[],
+  configuredMinutes = CAP_CEILING,
+): Cap {
+  const worked = series.filter((day) => day.planned > 0);
+  const ceiling = Math.min(CAP_CEILING, configuredMinutes);
+
+  if (worked.length < 3) {
+    return {
+      minutes: Math.min(ceiling, CAP_COLD_START),
+      source: "nuovo",
+      typicalMinutes: null,
+    };
+  }
+
+  const typical = Math.round(
+    worked.reduce((sum, day) => sum + day.done, 0) / worked.length,
+  );
+
+  // Il tetto non scende sotto un'ora: sotto quella soglia non è più un limite
+  // realistico, è un'app che si arrende.
+  const fromHistory = Math.max(60, Math.round((typical * CAP_STRETCH) / 5) * 5);
+
+  return {
+    minutes: Math.min(ceiling, fromHistory),
+    source: fromHistory < ceiling ? "storico" : "impostazioni",
+    typicalMinutes: typical,
+  };
+}
+
+/**
+ * La frase che spiega il tetto. `null` quando non c'è niente da spiegare —
+ * dire «ho pianificato sei ore perché puoi farne sei» è rumore.
+ */
+export function capExplanation(cap: Cap): string | null {
+  if (cap.source === "nuovo") {
+    return "Parto da 4h al giorno: quando avrò visto qualche giornata tua, adatterò il tetto a quello che completi davvero.";
+  }
+  if (cap.source === "storico" && cap.typicalMinutes !== null) {
+    return `Ho pianificato al massimo ${fmtDuration(cap.minutes)} al giorno invece di ${fmtDuration(CAP_CEILING)}: ultimamente completi in media ${fmtDuration(cap.typicalMinutes)}.`;
+  }
+  return null;
+}
+
+/**
+ * Gli Highlight della settimana: quanti scelti, quanti portati a termine.
+ *
+ * È la metrica che la specifica chiama «giornata vinta», e vale più del
+ * numero totale di task fatti: dodici cose piccole non fanno una settimana
+ * riuscita se la cosa che contava è slittata tutti i giorni.
+ *
+ * Il denominatore è **sette**, non il numero di Highlight scelti: una
+ * giornata senza Highlight non è una giornata neutra, è una giornata in cui
+ * non si è deciso cosa contava.
+ */
+export function weeklyHighlights(
+  tasks: Task[],
+  { from, to }: { from: DayISO; to: DayISO },
+): { chosen: number; done: number; days: number } {
+  const inWeek = tasks.filter(
+    (task) =>
+      task.is_daily_highlight &&
+      task.highlight_date !== null &&
+      task.highlight_date >= from &&
+      task.highlight_date <= to,
+  );
+
+  return {
+    chosen: inWeek.length,
+    done: inWeek.filter((task) => task.status === "done").length,
+    days: 7,
+  };
 }

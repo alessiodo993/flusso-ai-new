@@ -4,6 +4,7 @@ import {
   carryOverLeft,
   dayTotals,
   formatSlots,
+  isReviewDay,
   kickoffMessage,
   MAX_CARRY_OVER,
   shutdownSummary,
@@ -203,5 +204,21 @@ describe("formatSlots", () => {
 
   it("scarta i ritagli inutilizzabili", () => {
     expect(formatSlots([{ start: 540, end: 545 }], fmtMin)).toEqual([]);
+  });
+});
+
+describe("isReviewDay", () => {
+  it("è domenica o lunedì", () => {
+    // 2026-08-02 è una domenica, 2026-08-03 il lunedì dopo.
+    expect(isReviewDay("2026-08-02")).toBe(true);
+    expect(isReviewDay("2026-08-03")).toBe(true);
+  });
+
+  it("non interrompe una giornata di lavoro", () => {
+    // Proporre una revisione il mercoledì pomeriggio significa fermare
+    // qualcuno che stava lavorando: l'opposto di quello che serve.
+    for (const day of ["2026-07-28", "2026-07-29", "2026-07-30", "2026-07-31", "2026-08-01"]) {
+      expect(isReviewDay(day), day).toBe(false);
+    }
   });
 });

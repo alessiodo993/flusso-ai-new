@@ -55,9 +55,9 @@ describe("isListable", () => {
     expect(isListable(task({ id: "b", day: TODAY }))).toBe(false);
   });
 
-  it("tiene fuori archiviati e da rivedere", () => {
+  it("tiene fuori archiviati e in dubbio", () => {
     expect(isListable(task({ id: "c", status_review: "archived" }))).toBe(false);
-    // I «da rivedere» hanno la loro sezione in fondo: mostrarli anche qui
+    // I task «in dubbio» hanno la loro sezione in fondo: mostrarli anche qui
     // li farebbe comparire due volte.
     expect(isListable(task({ id: "d", status_review: "stale" }))).toBe(false);
   });

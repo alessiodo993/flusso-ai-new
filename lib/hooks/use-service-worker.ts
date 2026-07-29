@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { emit } from "@/lib/events";
+import { SNOOZE_MINUTES } from "@/lib/snooze";
+import { addDaysISO, todayISO } from "@/lib/time";
 
 /**
  * Registrazione del service worker e ascolto dei suoi messaggi.
@@ -82,7 +84,13 @@ export function useServiceWorker() {
 
   /** Mostra un avviso tramite il worker, con i pulsanti azione. */
   const notify = useCallback(
-    (input: { title: string; body: string; tag: string; taskId: string }) => {
+    (input: {
+      title: string;
+      body: string;
+      tag: string;
+      taskId: string;
+      actions: Array<{ action: string; title: string }>;
+    }) => {
       const worker = registration?.active ?? navigator.serviceWorker?.controller;
       if (!worker) return false;
 
@@ -99,7 +107,13 @@ function handleAction(action: string | undefined, taskId: string | undefined) {
   if (!taskId) return;
 
   if (action === "rimanda") {
-    emit("flusso:snooze", { taskId, minutes: 15 });
+    emit("flusso:snooze", { taskId, minutes: SNOOZE_MINUTES });
+    return;
+  }
+  if (action === "sposta") {
+    // Questo sì che è un rinvio: sposta il task a domani passando dal
+    // contatore, quindi al terzo scatta il dialogo dell'attrito.
+    emit("flusso:postpone", { taskId, day: addDaysISO(todayISO(), 1) });
     return;
   }
   // «Inizia» e il tocco sul corpo della notifica fanno la stessa cosa: chi

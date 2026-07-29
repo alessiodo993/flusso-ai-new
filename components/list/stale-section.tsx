@@ -1,14 +1,27 @@
 "use client";
 
-import { Archive, ChevronRight, RefreshCw } from "lucide-react";
+import {
+  Archive,
+  CalendarCheck,
+  ChevronRight,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 
 import { DECAY_DAYS } from "@/lib/calibration";
-import { useBulkUpdateTasks, useTasks } from "@/lib/hooks/use-tasks";
+import {
+  useBulkUpdateTasks,
+  useDeleteTasks,
+  useRestoreTasks,
+  useTasks,
+} from "@/lib/hooks/use-tasks";
+import { undoableToast } from "@/lib/hooks/use-undo";
+import { isReviewDay } from "@/lib/rituals";
 import { cn } from "@/lib/utils";
 
 /**
- * «Da rivedere»: i task che non sono mai finiti sul calendario da tre
+ * «In dubbio»: i task che non sono mai finiti sul calendario da tre
  * settimane.
  *
  * Sta in fondo alla Lista e parte richiusa. Non è una lista di cose da fare —
@@ -18,7 +31,16 @@ import { cn } from "@/lib/utils";
 export function StaleSection() {
   const { tasks } = useTasks();
   const bulk = useBulkUpdateTasks();
+  const remove = useDeleteTasks();
+  const restore = useRestoreTasks();
   const [open, setOpen] = useState(false);
+
+  /*
+   * Domenica e lunedì la sezione si annuncia da sé, invece di aspettare che
+   * qualcuno pensi ad aprirla. Resta chiusa: l'invito è una riga, non un
+   * elenco che si spalanca sotto le mani.
+   */
+  const reviewDay = isReviewDay();
 
   const stale = tasks.filter((task) => task.status_review === "stale");
   if (stale.length === 0) return null;
@@ -37,11 +59,26 @@ export function StaleSection() {
             open && "rotate-90",
           )}
         />
-        <span className="text-sm font-medium">Da rivedere</span>
+        <span className="text-sm font-medium">In dubbio</span>
         <span className="tnum ml-auto text-xs text-ink-faint">
           {stale.length}
         </span>
       </button>
+
+      {reviewDay && !open && (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-start gap-2 border-t border-line px-3 py-2 text-left"
+        >
+          <CalendarCheck className="mt-0.5 size-4 shrink-0 text-accent" />
+          <span className="text-xs leading-relaxed text-ink-soft">
+            È il momento buono per una passata: {stale.length}{" "}
+            {stale.length === 1 ? "task aspetta" : "task aspettano"} una
+            decisione. Ci vogliono due minuti.
+          </span>
+        </button>
+      )}
 
       {open && (
         <>
@@ -83,6 +120,25 @@ export function StaleSection() {
                   }
                 >
                   <Archive className="size-4" />
+                </button>
+
+                {/* Archiviare lo mette via, eliminare lo fa sparire: sono due
+                    decisioni diverse e vanno entrambe a portata di mano, qui
+                    dove si sta facendo pulizia. */}
+                <button
+                  type="button"
+                  className="icon-btn icon-btn-sm"
+                  aria-label={`Elimina «${task.title}»`}
+                  title="Elimina"
+                  onClick={() => {
+                    remove.mutate({ ids: [task.id] });
+                    undoableToast({
+                      message: `«${task.title}» eliminato.`,
+                      onUndo: () => restore.mutate({ tasks: [task] }),
+                    });
+                  }}
+                >
+                  <Trash2 className="size-4" />
                 </button>
               </li>
             ))}

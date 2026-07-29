@@ -16,6 +16,11 @@ import {
 } from "@/lib/hooks/use-focus-sessions";
 import { useFocusTimer } from "@/lib/hooks/use-focus-timer";
 import { useOkrs, useUpdateKeyResult } from "@/lib/hooks/use-okrs";
+import {
+  readSnoozeLog,
+  withoutSnoozes,
+  writeSnoozeLog,
+} from "@/lib/snooze";
 import { useProjects } from "@/lib/hooks/use-projects";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { useTasks, useUnscheduleTask, useUpdateTask } from "@/lib/hooks/use-tasks";
@@ -134,6 +139,17 @@ export function FocusOverlay() {
         });
       }
 
+      /*
+       * Un micro-avvio portato a termine ripulisce i micro-rinvii di quel
+       * task: chi ha lavorato dieci minuti su una cosa si è guadagnato di
+       * poterla rimandare ancora. È l'incentivo scritto nel codice —
+       * cominciare ripulisce, rimandare consuma — e vale anche se la sessione
+       * si chiude come «partial»: il punto era partire.
+       */
+      if (task?.day && micro && outcome !== "abandoned") {
+        writeSnoozeLog(withoutSnoozes(readSnoozeLog(), task.day, task.id));
+      }
+
       if (task && outcome === "completed") {
         updateTask.mutate({
           id: task.id,
@@ -150,7 +166,7 @@ export function FocusOverlay() {
       setOpen(false);
       setSessionId(null);
     },
-    [closeSession, leastAdvancedFor, sessionId, task, timer, updateTask],
+    [closeSession, leastAdvancedFor, micro, sessionId, task, timer, updateTask],
   );
 
   const later = useCallback(() => {

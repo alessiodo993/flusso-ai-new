@@ -9,11 +9,12 @@ import {
   optimismCoefficient,
   optimismMessage,
   plannedVsDone,
+  weeklyHighlights,
 } from "@/lib/calibration";
 import { qk } from "@/lib/hooks/query-keys";
 import { useFocusSessions } from "@/lib/hooks/use-focus-sessions";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { addDaysISO, todayISO } from "@/lib/time";
+import { addDaysISO, startOfWeekISO, todayISO } from "@/lib/time";
 import { toTask, type Task } from "@/lib/types";
 
 /** Quanto indietro guarda il grafico. */
@@ -56,6 +57,10 @@ export function useCalibration() {
       coefficient,
       message: optimismMessage(coefficient),
       completion: completionRate(scheduled, { days: CHART_DAYS, today }),
+      highlights: weeklyHighlights(scheduled, {
+        from: startOfWeekISO(today),
+        to: addDaysISO(startOfWeekISO(today), 6),
+      }),
       series: plannedVsDone(scheduled, { days: CHART_DAYS, today }),
     };
   }, [history.isLoading, loadingSessions, scheduled, sessions, today]);

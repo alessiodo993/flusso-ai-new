@@ -1,4 +1,4 @@
-import { fmtDuration } from "@/lib/time";
+import { dowOf, fmtDuration, todayISO, type DayISO } from "@/lib/time";
 import type { DailyReview, Task } from "@/lib/types";
 import { isScheduled } from "@/lib/types";
 
@@ -69,7 +69,12 @@ export function kickoffMessage({
 /** Il massimo di task che si possono riportare a domani. */
 export const MAX_CARRY_OVER = 3;
 
-export type PendingChoice = "domani" | "lista" | "fatto" | "elimina";
+export type PendingChoice =
+  | "domani"
+  | "lista"
+  | "fatto"
+  | "ridimensiona"
+  | "elimina";
 
 /**
  * Quante scelte «domani» sono ancora disponibili.
@@ -102,4 +107,17 @@ export function formatSlots(
   return gaps
     .filter((gap) => gap.end - gap.start >= 15)
     .map((gap) => `${fmt(gap.start)}–${fmt(gap.end)}`);
+}
+
+/**
+ * Il giorno in cui vale la pena guardare i task in dubbio.
+ *
+ * Domenica o lunedì: la fine di una settimana o l'inizio di quella dopo sono
+ * i due momenti in cui si guarda l'insieme invece del prossimo blocco.
+ * Proporlo un mercoledì pomeriggio significa interrompere qualcuno che stava
+ * lavorando — l'opposto di quello che serve.
+ */
+export function isReviewDay(day: DayISO = todayISO()): boolean {
+  const dow = dowOf(day);
+  return dow === 0 || dow === 1;
 }

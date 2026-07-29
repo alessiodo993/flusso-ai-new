@@ -91,10 +91,14 @@ self.addEventListener("message", (event) => {
       icon: "/icon.svg",
       badge: "/icon-maskable.svg",
       data: { taskId: data.taskId },
-      actions: [
-        { action: "inizia", title: "Inizia" },
-        { action: "rimanda", title: "Rimanda 15 min" },
-      ],
+      /*
+       * Le azioni le decide il documento, non il worker: dipendono da quante
+       * volte quel blocco è già stato rimandato oggi, e quel conteggio vive
+       * lì. Il worker non sa niente e non deve saperlo.
+       */
+      actions: Array.isArray(data.actions) && data.actions.length > 0
+        ? data.actions
+        : [{ action: "inizia", title: "Inizia" }],
     }),
   );
 });

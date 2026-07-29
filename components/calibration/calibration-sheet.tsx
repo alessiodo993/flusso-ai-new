@@ -93,6 +93,30 @@ export function CalibrationSheet() {
           )}
         </section>
 
+        {/*
+          La metrica che dice se la settimana è andata. Sta **sopra** il
+          grafico di proposito: dodici cose piccole non fanno una settimana
+          riuscita se quella che contava è slittata tutti i giorni.
+        */}
+        <section>
+          <p className="label mb-2">Highlight completati</p>
+          <p className="flex items-baseline gap-2">
+            <span className="tnum font-display text-3xl">
+              {calibration.highlights.done}
+              <span className="text-xl text-ink-faint">
+                /{calibration.highlights.days}
+              </span>
+            </span>
+            <span className="text-sm text-ink-soft">
+              {calibration.highlights.chosen === 0
+                ? "questa settimana non hai ancora scelto una cosa che conta"
+                : calibration.highlights.done === calibration.highlights.chosen
+                  ? "giornate vinte, su quelle in cui hai scelto"
+                  : `su ${calibration.highlights.chosen} scelti questa settimana`}
+            </span>
+          </p>
+        </section>
+
         <section>
           <p className="label mb-2">Pianificato contro eseguito</p>
           <PlannedVsDoneChart series={calibration.series} />

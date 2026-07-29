@@ -1,12 +1,17 @@
 "use client";
 
-import { Info, Sparkles, Star } from "lucide-react";
+import { ArrowDownToLine, Info, Sparkles, Star } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { ResponsiveSheet } from "@/components/shell/responsive-sheet";
 import { emit, useFlussoEvent } from "@/lib/events";
 import { useReviewHistory, useSaveReview } from "@/lib/hooks/use-reviews";
-import { useSetHighlight, useTasks } from "@/lib/hooks/use-tasks";
+import {
+  useSetHighlight,
+  useTasks,
+  useUnscheduleTask,
+} from "@/lib/hooks/use-tasks";
 import { dayTotals, kickoffMessage, typicalCompleted } from "@/lib/rituals";
 import { fmtDuration, fmtMin, todayISO } from "@/lib/time";
 import { isScheduled } from "@/lib/types";
@@ -28,6 +33,7 @@ export function KickoffSheet() {
   const { history } = useReviewHistory();
   const save = useSaveReview();
   const setHighlight = useSetHighlight();
+  const unschedule = useUnscheduleTask();
 
   useFlussoEvent(
     "flusso:open-kickoff",
@@ -51,6 +57,15 @@ export function KickoffSheet() {
   });
 
   const highlight = scheduled.find((task) => task.is_daily_highlight);
+
+  /*
+   * Il candidato da togliere: l'ultimo della giornata, e mai l'Highlight —
+   * quello è la cosa che conta, e alleggerire togliendo proprio quella
+   * sarebbe il contrario di alleggerire.
+   */
+  const lightest = [...scheduled]
+    .reverse()
+    .find((task) => !task.is_daily_highlight && task.status !== "done");
 
   return (
     <ResponsiveSheet
@@ -83,10 +98,32 @@ export function KickoffSheet() {
     >
       <div className="space-y-3 pb-1">
         {message && (
-          <p className="flex items-start gap-2 rounded-flusso-md bg-warn-soft p-3 text-sm">
-            <Info className="mt-0.5 size-4 shrink-0 text-warn" />
-            {message}
-          </p>
+          <div className="rounded-flusso-md bg-warn-soft p-3">
+            <p className="flex items-start gap-2 text-sm">
+              <Info className="mt-0.5 size-4 shrink-0 text-warn" />
+              {message}
+            </p>
+
+            {/*
+              Un avviso senza un'azione accanto è solo un rimprovero. Il
+              pulsante toglie l'ultimo blocco della giornata — l'ultimo, non
+              uno scelto da noi — e lo rimette in Lista: si può premere più
+              volte fino a quando la giornata sta in piedi.
+            */}
+            {lightest && (
+              <button
+                type="button"
+                className="btn btn-soft mt-2 h-8 px-2.5 text-xs"
+                onClick={() => {
+                  unschedule.mutate({ id: lightest.id });
+                  toast(`«${lightest.title}» è tornato in Lista.`);
+                }}
+              >
+                <ArrowDownToLine className="size-3.5" />
+                Alleggerisci: togli «{lightest.title}»
+              </button>
+            )}
+          </div>
         )}
 
         {totals.tasksPlanned === 0 ? (

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { emit } from "@/lib/events";
 import { useServiceWorker } from "@/lib/hooks/use-service-worker";
+import { canSnooze, readSnoozeLog, SNOOZE_MINUTES } from "@/lib/snooze";
 import { nowMinutes, todayISO } from "@/lib/time";
 import { isScheduled, type Task } from "@/lib/types";
 
@@ -79,11 +80,35 @@ export function useBlockNotifications(tasks: Task[]) {
            * sviluppo, browser senza supporto, registrazione fallita — si
            * ripiega sull'avviso semplice, che almeno avvisa.
            */
+          /*
+           * Le azioni cambiano con la storia del blocco. Dopo due micro-rinvii
+           * nello stesso giorno «Rimanda 15 min» sparisce: al terzo quarto
+           * d'ora non si sta più gestendo un imprevisto, si sta rimandando la
+           * giornata quindici minuti per volta. Resta «Inizia» e resta
+           * «Sposta», che però è un rinvio vero e come tale viene contato.
+           */
+          const ancoraRimandabile = canSnooze(
+            readSnoozeLog(),
+            today,
+            task.id,
+          );
+
           const shown = notify({
             title: task.title,
-            body: "È l'ora di questo blocco.",
+            body: ancoraRimandabile
+              ? "È l'ora di questo blocco."
+              : "Terzo tentativo. Dieci minuti bastano per cominciare.",
             tag: `flusso-${task.id}`,
             taskId: task.id,
+            actions: ancoraRimandabile
+              ? [
+                  { action: "inizia", title: "Inizia" },
+                  { action: "rimanda", title: `Rimanda ${SNOOZE_MINUTES} min` },
+                ]
+              : [
+                  { action: "inizia", title: "Inizia" },
+                  { action: "sposta", title: "Sposta il task" },
+                ],
           });
           if (shown) return;
 

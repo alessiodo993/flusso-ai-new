@@ -9,6 +9,11 @@ import {
   optimismCoefficient,
   optimismMessage,
   plannedVsDone,
+  CAP_CEILING,
+  CAP_COLD_START,
+  capExplanation,
+  realisticCap,
+  weeklyHighlights,
 } from "./calibration";
 import { addDaysISO } from "./time";
 import type { FocusSession, Task } from "./types";
@@ -282,5 +287,136 @@ describe("isStale", () => {
     expect(
       isStale(task({ id: "f", created_at: old, day: TODAY }), { today: TODAY }),
     ).toBe(false);
+  });
+});
+
+describe("realisticCap", () => {
+  /** Una serie di giorni: `[pianificati, fatti]` in minuti. */
+  const series = (pairs: Array<[number, number]>) =>
+    pairs.map(([planned, done], i) => ({
+      day: `2026-07-${String(10 + i).padStart(2, "0")}`,
+      planned,
+      done,
+    }));
+
+  it("con poco storico parte da quattro ore, non da sei", () => {
+    // La prima giornata pianificata troppo piena è anche la prima delusione.
+    const cap = realisticCap(series([[300, 200]]));
+    expect(cap.minutes).toBe(CAP_COLD_START);
+    expect(cap.source).toBe("nuovo");
+    expect(cap.typicalMinutes).toBeNull();
+  });
+
+  it("segue il completato reale, con un margine del 15%", () => {
+    const cap = realisticCap(
+      series([
+        [300, 180],
+        [300, 200],
+        [300, 220],
+      ]),
+    );
+    expect(cap.typicalMinutes).toBe(200);
+    expect(cap.minutes).toBe(230); // 200 × 1.15
+    expect(cap.source).toBe("storico");
+  });
+
+  it("non sfora mai le sei ore, per bravi che si sia", () => {
+    const cap = realisticCap(
+      series([
+        [600, 560],
+        [600, 580],
+        [600, 600],
+      ]),
+    );
+    expect(cap.minutes).toBe(CAP_CEILING);
+    expect(cap.source).toBe("impostazioni");
+  });
+
+  it("ignora i giorni senza niente in programma", () => {
+    // Due domeniche vuote non devono stringere le giornate lavorative.
+    const conRiposo = realisticCap(
+      series([
+        [300, 200],
+        [300, 200],
+        [300, 200],
+        [0, 0],
+        [0, 0],
+      ]),
+    );
+    expect(conRiposo.typicalMinutes).toBe(200);
+  });
+
+  it("rispetta un tetto più basso scelto nelle impostazioni", () => {
+    const cap = realisticCap(
+      series([
+        [600, 560],
+        [600, 580],
+        [600, 600],
+      ]),
+      120,
+    );
+    expect(cap.minutes).toBe(120);
+  });
+
+  it("non scende sotto un'ora", () => {
+    // Sotto quella soglia non è più un limite realistico: è un'app che si
+    // arrende.
+    const cap = realisticCap(
+      series([
+        [300, 0],
+        [300, 10],
+        [300, 5],
+      ]),
+    );
+    expect(cap.minutes).toBe(60);
+  });
+});
+
+describe("capExplanation", () => {
+  it("spiega il tetto solo quando c'è qualcosa da spiegare", () => {
+    expect(
+      capExplanation({ minutes: 230, source: "storico", typicalMinutes: 200 }),
+    ).toBe(
+      "Ho pianificato al massimo 3h 50m al giorno invece di 6h: ultimamente completi in media 3h 20m.",
+    );
+    expect(
+      capExplanation({ minutes: 240, source: "nuovo", typicalMinutes: null }),
+    ).toMatch(/Parto da 4h/);
+    // Il tetto viene dalle impostazioni: dirlo non aggiunge nulla.
+    expect(
+      capExplanation({ minutes: 360, source: "impostazioni", typicalMinutes: 400 }),
+    ).toBeNull();
+  });
+});
+
+describe("weeklyHighlights", () => {
+  const week = { from: "2026-07-27", to: "2026-08-02" };
+
+  it("conta scelti e fatti dentro la settimana", () => {
+    const tasks = [
+      task({ id: "a", is_daily_highlight: true, highlight_date: "2026-07-27", status: "done" }),
+      task({ id: "b", is_daily_highlight: true, highlight_date: "2026-07-28" }),
+      task({ id: "c", is_daily_highlight: true, highlight_date: "2026-07-29", status: "done" }),
+    ];
+
+    expect(weeklyHighlights(tasks, week)).toEqual({ chosen: 3, done: 2, days: 7 });
+  });
+
+  it("il denominatore è sette, non i giorni in cui si è scelto", () => {
+    // Una giornata senza Highlight non è neutra: è una giornata in cui non si
+    // è deciso cosa contava.
+    const tasks = [
+      task({ id: "a", is_daily_highlight: true, highlight_date: "2026-07-27", status: "done" }),
+    ];
+    expect(weeklyHighlights(tasks, week).days).toBe(7);
+  });
+
+  it("ignora ciò che sta fuori dalla settimana e chi non è highlight", () => {
+    const tasks = [
+      task({ id: "a", is_daily_highlight: true, highlight_date: "2026-07-20", status: "done" }),
+      task({ id: "b", is_daily_highlight: false, highlight_date: "2026-07-28", status: "done" }),
+      task({ id: "c", is_daily_highlight: true, highlight_date: null, status: "done" }),
+    ];
+    expect(weeklyHighlights(tasks, week)).toEqual({ chosen: 0, done: 0, days: 7 });
   });
 });

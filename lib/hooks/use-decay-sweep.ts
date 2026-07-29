@@ -6,7 +6,7 @@ import { isStale } from "@/lib/calibration";
 import { useBulkUpdateTasks, useTasks } from "@/lib/hooks/use-tasks";
 
 /**
- * Marca come «da rivedere» i task mai pianificati da tre settimane.
+ * Marca come «in dubbio» i task mai pianificati da tre settimane.
  *
  * Gira nel browser una volta per sessione, e non in un lavoro pianificato sul
  * server: è un'app monoutente, e far girare un cron per una manciata di righe

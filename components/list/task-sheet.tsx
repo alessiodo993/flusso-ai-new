@@ -18,6 +18,8 @@ import { SelectField } from "@/components/ui/select-field";
 import { useProjects } from "@/lib/hooks/use-projects";
 import { useTaskQuickActions } from "@/lib/hooks/use-task-quick-actions";
 import { useUpdateTask } from "@/lib/hooks/use-tasks";
+import { correctedEstimate, MIN_SESSIONS_TO_SHOW } from "@/lib/calibration";
+import { useCalibration } from "@/lib/hooks/use-calibration";
 import { needsMicroStart } from "@/lib/postpone";
 import { fmtDuration } from "@/lib/time";
 import {
@@ -50,7 +52,19 @@ export function TaskSheet({
   const { active: projects } = useProjects();
   const update = useUpdateTask();
   const actions = useTaskQuickActions();
+  const calibration = useCalibration();
   const dateRef = useRef<HTMLInputElement>(null);
+
+  /** La durata che di solito serve davvero, se lo storico basta a dirlo. */
+  const corrected =
+    task?.est_minutes &&
+    calibration.coefficient !== null &&
+    calibration.sessionCount >= MIN_SESSIONS_TO_SHOW
+      ? correctedEstimate(task.est_minutes, calibration.coefficient)
+      : null;
+
+  // Se la correzione coincide con la stima non c'è nulla da dire.
+  const showCorrected = corrected !== null && corrected !== task?.est_minutes;
 
   // Titolo e note si scrivono in locale e si salvano quando il campo perde il
   // fuoco: una mutazione a ogni tasto sarebbe rumore di rete e basta.
@@ -244,6 +258,20 @@ export function TaskSheet({
                 label: fmtDuration(minutes),
               }))}
             />
+
+            {/*
+              La correzione si mostra solo con abbastanza sessioni alle spalle.
+              Con tre misurazioni il coefficiente esiste ma non significa
+              niente, e un numero inventato è peggio di nessun numero: verrebbe
+              creduto. Non tocca il valore salvato — quella è la stima
+              dell'utente — dice solo cosa succede di solito.
+            */}
+            {showCorrected && (
+              <p className="mt-1 text-xs text-ink-faint">
+                Di solito ne servono ~{fmtDuration(corrected)}, secondo il tuo
+                storico.
+              </p>
+            )}
           </Labelled>
 
           <Labelled label="Scadenza">

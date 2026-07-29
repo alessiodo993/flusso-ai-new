@@ -1081,3 +1081,116 @@ ripubblica, perché quel valore non si può sapere prima.
 
 Verificato che la build **passa anche senza nessuna variabile d'ambiente**: su
 Vercel il primo deploy non fallisce prima che si faccia in tempo a impostarle.
+
+---
+
+## Release esecuzione — audit di una specifica già in gran parte implementata
+
+Arriva una specifica di dieci punti per «chiudere il ciclo»: rendere l'avvio
+facile, il rinvio visibile e costoso, e far pianificare all'AI giornate
+realistiche. Scritta per un'altra versione di Flusso — cita TanStack Start e
+il gateway AI di Lovable — ma il contenuto è quello che conta.
+
+**Prima ho fatto l'audit, punto per punto.** Rifare ciò che esiste è il modo
+più rapido di rompere quello che funziona, e otto punti su dieci erano già in
+piedi: le colonne di `tasks`, `focus_sessions`, `daily_reviews`, le fasce di
+energia nelle impostazioni, il Focus Mode col contesto OKR
+(«Questo blocco avanza: …»), il coefficiente di ottimismo, il contatore dei
+rinvii col dialogo al terzo, il decay, kickoff e shutdown, l'Highlight
+esclusivo, il buffer, il `+15 min` che allunga il blocco solo se lo slot dopo
+è libero.
+
+### Il buco che l'audit ha trovato
+
+**Il micro-avvio era implementato e irraggiungibile.** Il Focus Mode
+sapeva già fare tutto — timer ridotto, un solo sottotask davanti,
+`was_micro_start`, e la regola che non conta mai come rinvio — ma
+`grep "focus-now.*micro"` non trovava **nessun chiamante**. La leva
+anti-procrastinazione più importante dell'app non aveva un pulsante.
+
+Ora c'è in tre posti, e il terzo è quello che conta: è la **prima** opzione
+del dialogo del terzo rinvio, prima di «spezzalo» e di «riduci la stima» —
+*«Comincia adesso, dieci minuti. Poi puoi smettere. Di solito non si
+smette.»* Chi arriva lì stava rimandando, ed è il momento esatto in cui quella
+frase ha la presa più forte. Non tocca il contatore, perché il task non viene
+rinviato.
+
+Sul calendario non ho aggiunto un terzo bersaglio: il ▶ di un task che ha già
+slittato due volte **diventa** «10». Uno da 24px è già il minimo consentito, e
+per quel task la sessione intera è esattamente ciò che non è mai partito.
+
+### Il tetto della giornata non lo decidono più le impostazioni
+
+Prima il planner usava `daily_cap_minutes` (360). Ora usa
+`min(6h, media completata negli ultimi 14 giorni × 1.15)`, e **4h** per chi non
+ha storico — un utente nuovo non sa quanto riesce a fare, e la prima giornata
+troppo piena è anche la prima delusione, quella che fa smettere.
+
+La parte che la specifica dice in una riga e che decide il risultato è **quali
+giorni entrano nella media**: solo quelli in cui c'era qualcosa in programma.
+Contare le domeniche vuote stringerebbe le giornate lavorative per colpa dei
+giorni di riposo. Il margine del 15% è uno strappo, non un salto: senza, il
+tetto inseguirebbe la media al ribasso e si stringerebbe da solo.
+
+E lo dice: *«Ho pianificato al massimo 3h 50m al giorno invece di 6h:
+ultimamente completi in media 3h 20m.»* La frase compare **prima** di
+pianificare, non solo nel riepilogo, perché è lì che serve — altrimenti sembra
+che l'app non abbia messo tutto.
+
+### Il quarto d'ora non è infinito
+
+«Rimanda 15 min» era illimitato: si può rimandare una giornata quindici minuti
+per volta. Ora dopo due volte sullo stesso blocco nello stesso giorno la
+notifica cambia: resta «Inizia», e al posto del rinvio compare «Sposta il
+task», che è un rinvio vero e come tale finisce nel contatore.
+
+Il conteggio vive nel `localStorage`, non nel database: rimandare di un quarto
+d'ora è legittimo — si finisce la telefonata — e non deve sporcare il dato che
+fa scattare l'attrito del terzo rinvio. Il registro si pota da sé, perché
+nessuno svuota il `localStorage`.
+
+**Un micro-avvio concluso azzera quel conteggio.** È l'incentivo scritto nel
+codice: cominciare ripulisce, rimandare consuma. Vale anche se la sessione si
+chiude come parziale — il punto era partire.
+
+### Il resto
+
+- **Stima corretta nel Task Sheet**: *«Di solito ne servono ~2h, secondo il tuo
+  storico»*, con **dieci** sessioni alle spalle e non cinque. Cinque bastano a
+  calcolare il coefficiente; qui il numero non riassume un andamento,
+  contraddice la stima che l'utente ha appena scelto — per farlo deve avere
+  ragione. E tace se coincide.
+- **Fascia di picco sul calendario**: sfondo appena più caldo fra le 9 e le 12.
+  Serve *mentre* si trascina, quindi va nel calendario e non in una
+  spiegazione altrove. `pointer-events: none`: non deve mai rubare un drop.
+- **«Highlight completati: n/7»** in cima alla dashboard, sopra il grafico.
+  Il denominatore è sette e non il numero di Highlight scelti: una giornata
+  senza Highlight non è neutra, è una giornata in cui non si è deciso cosa
+  contava.
+- **Kickoff, «alleggerisci»**: l'avviso sul sovraccarico ora ha un pulsante
+  accanto, che toglie l'**ultimo** blocco della giornata e mai l'Highlight.
+  Un avviso senza un'azione è solo un rimprovero.
+- **Shutdown, «Ridimensiona»**: torna in Lista con la stima dimezzata. È la
+  risposta onesta al caso più comune — il task non era troppo difficile, era
+  troppo grosso.
+- **Decay**: la sezione si chiama «In dubbio» come da specifica, ha anche
+  «Elimina» accanto a Riattiva e Archivia, e la domenica o il lunedì si
+  annuncia da sé con una riga. Resta chiusa: l'invito è una riga, non un
+  elenco che si spalanca sotto le mani.
+
+### Cosa ho lasciato diverso dalla specifica, e perché
+- `status_review` resta `'stale'` nel database invece di `'in_dubbio'`:
+  l'etichetta che l'utente legge è «In dubbio», e rinominare un valore enum
+  su un database già popolato è rischio senza guadagno.
+- Al terzo rinvio la seconda opzione riduce **la stima** invece di aprire il
+  titolo in modifica. È lo stesso obiettivo — rendere il task più piccolo — e
+  un numero che scende è una promessa più verificabile di un titolo riscritto.
+
+### Verificato nel browser
+Fascia di picco disegnata (336px, 9→12), il ▶ diventato «10» sul task
+rinviato, «Solo 10 minuti» nel Task Sheet, la stima corretta, la spiegazione
+del tetto, la metrica Highlight, «Ridimensiona» che annuncia
+*«Torna in Lista da 45m, invece di 1h 30m»*, la sezione «In dubbio».
+Nessun errore in console, `npm run a11y` e `npm run keyboard` puliti.
+
+**339 test.**

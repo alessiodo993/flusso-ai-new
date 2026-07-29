@@ -1,6 +1,6 @@
 "use client";
 
-import { Hand, Loader2, Sparkles } from "lucide-react";
+import { Hand, Info, Loader2, Sparkles } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -192,7 +192,7 @@ export function PlannerSheet() {
         <PlacementList
           placements={placements}
           unplaced={unplaced}
-          note={note}
+          note={[context.capMessage, note].filter(Boolean).join(" ")}
           tasksById={tasksById}
           projectsById={projectsById}
           settings={context.settings}
@@ -259,6 +259,16 @@ export function PlannerSheet() {
               {fmtDuration(context.minutesAvailable(days))} liberi, al netto di
               quello che c&apos;è già.
             </p>
+
+            {/* Il tetto arriva da quello che l'utente completa davvero: dirlo
+                prima di pianificare evita la sensazione che l'app «non abbia
+                messo tutto». */}
+            {context.capMessage && (
+              <p className="mt-1.5 flex items-start gap-1.5 text-xs text-ink-soft">
+                <Info className="mt-0.5 size-3.5 shrink-0 text-ink-faint" />
+                {context.capMessage}
+              </p>
+            )}
           </div>
 
           {mode === "io" && (
