@@ -31,8 +31,14 @@ type EventMap = {
     autoStart?: boolean;
   };
   "flusso:focus-project": { projectId: string };
-  /** Apre la cattura rapida, eventualmente già in ascolto della voce. */
-  "flusso:quick-capture": { voice?: boolean };
+  /** Porta il cursore nella barra di cattura della sezione corrente. */
+  "flusso:quick-capture": Record<string, never>;
+  /**
+   * Apre la cattura magica: una frase intera da far interpretare all'AI,
+   * eventualmente dettata. È un'altra cosa dalla cattura rapida — lì si
+   * scrive un titolo, qui si scarica un pensiero e si rivede il risultato.
+   */
+  "flusso:magic-capture": { voice?: boolean };
   "flusso:open-settings": Record<string, never>;
   /** Realtà vs Piano. */
   "flusso:open-calibration": Record<string, never>;

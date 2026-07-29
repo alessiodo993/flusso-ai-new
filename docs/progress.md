@@ -737,3 +737,125 @@ Il codice non c'entrava.
 - Passo 10 (AI), in attesa della chiave Anthropic. L'**analisi AI dei
   risultati chiave** prevista in §6.8 fa parte di quel passo e non è ancora
   presente.
+
+---
+
+## Passo 10 — AI: cattura magica, planner multi-giorno, analisi OKR
+
+### La decisione che regge tutto il passo
+
+**L'AI non calcola gli orari.** Sceglie *quali* task e in *che ordine*; dove
+finiscono lo decide `lib/planner.ts`. La specifica chiama quei vincoli
+«rigidi, mai violabili», e un modello che fa aritmetica su finestre, buffer e
+tetti giornalieri prima o poi sbaglia in modo *plausibile* — cioè nel modo
+peggiore, perché il risultato sembra giusto. Il solver invece è aritmetica
+verificabile, ed è coperto da **30 test**.
+
+La seconda regola, per iscritto in tre punti del codice: **nessuna scrittura
+senza conferma**. Le route AI leggono e propongono, non scrivono mai; le
+scritture partono dal client dopo la revisione, dagli stessi hook ottimistici
+di tutto il resto. Se scrivesse la route, la conferma sarebbe una cortesia
+dell'interfaccia invece che un fatto dell'architettura.
+
+### Fatto
+
+**Il solver — `lib/planner.ts`, 30 test**
+- `planDays` scorre i giorni in ordine tenendo uno stato mutabile per
+  giornata, così i blocchi appena collocati diventano subito ostacoli per
+  quelli dopo.
+- Vincoli verificati uno per uno dai test: finestra di lavoro, buffer fra i
+  blocchi, impegni fissi ed eventi Google, tetto giornaliero (**un massimo,
+  non un obiettivo**: con mezz'ora di lavoro e sei ore di tetto il solver non
+  inventa altro), stime corrette dal coefficiente di ottimismo, priorità
+  highlight → scadenze → risultati chiave indietro → più rinviati.
+- Le fasce di energia sono una **preferenza, non un vincolo**: meglio un
+  blocco fuori fascia che un blocco mai pianificato. Anche questo è un test.
+- I task che non entrano tornano indietro con il motivo, invece di sparire.
+
+**Difetto trovato scrivendo i test.** `findStart` arrotondava allo slot *più
+vicino*: un buco che comincia alle 10:40 — capita appena `buffer_minutes` non
+è multiplo di 15, e il default è 10 — veniva scartato del tutto invece che
+usato dalle 10:45. Corretto con `snapUp`, che ora sta anche in `lib/time.ts`.
+
+**Il livello AI — `lib/ai/*`, 22 test**
+- `client.ts`: un solo punto di contatto col modello, che rifiuta di partire
+  nel browser. Gli errori sono **distinti per tipo** — 429, credito esaurito,
+  output non valido, sovraccarico — perché aspettare, ricaricare e riprovare
+  sono tre reazioni diverse, e un unico «qualcosa è andato storto» lascia
+  l'utente a indovinare quale.
+- `extractObject` pesca il primo oggetto JSON **bilanciato**: regge preamboli,
+  code, graffe dentro le stringhe (`rivedi {bozza}`) e un secondo oggetto
+  dopo il primo.
+- Schemi Zod **piatti e senza vincoli**, come chiede §6.7: niente `.min()`,
+  `.max()` o enum. I limiti stanno nel prompt e si fanno rispettare clampando
+  — una stima di 9000 minuti diventa 480, non un errore che costringe a
+  ridettare tutto.
+- `normalizeCapture` è la barriera: progetti inventati azzerati, date
+  impossibili (`2026-02-31`) scartate, `unisci`/`completa`/`elimina` **rifiutati
+  se il taskId non esiste**, così una proposta non arriva mai riferita a
+  righe che non ci sono.
+
+**Le quattro route** — `capture`, `plan`, `okr`, `shutdown` — leggono il
+contesto **dal server**, non dal client: se fosse il browser a mandare
+l'elenco dei task, un id inventato basterebbe a far proporre un'operazione su
+una riga altrui. Le RLS reggerebbero la scrittura, ma la proposta arriverebbe
+all'utente già sporca.
+
+**Cattura magica 🪄** — testo o voce (Web Speech API, `it-IT`, con
+`supported` in chiaro perché Firefox non ce l'ha), poi **schermata di
+revisione**: ogni proposta si accetta o si rifiuta singolarmente, il titolo si
+può correggere lì dentro, e le proposte **distruttive arrivano spente**. Il
+testo dettato resta nel campo se la chiamata fallisce.
+
+**Pianifica** — `✨ Sceglie l'AI` / `✋ Scelgo io`, fino a 7 giorni. In
+entrambe le modalità gli orari li calcola il solver: cambia solo chi sceglie i
+task. La revisione raggruppa per giorno, mostra il motivo di ogni blocco,
+permette di togliere e di cambiare orario, e dice quali task non ci stanno.
+
+**Analisi dei risultati chiave** — dal pulsante ✨ sulla card dell'obiettivo.
+Le riformulazioni **non si applicano da sole**: ognuna ha il suo pulsante,
+perché riscrivere un obiettivo è una decisione, non una correzione di
+battitura.
+
+**266 test** in tutto.
+
+### Difetto che solo una chiamata vera poteva trovare
+
+`askJson` precompilava la risposta con `{` — il trucco standard per impedire
+al modello di aprire con «Certo, ecco il piano:». Contro l'API vera:
+
+```
+400 invalid_request_error: This model does not support assistant message
+prefill. The conversation must end with a user message.
+```
+
+`claude-sonnet-5` non accetta il prefill. Tutte e quattro le route sarebbero
+fallite alla prima chiamata reale, con typecheck, lint, test e build verdi.
+Tolto il prefill; ora regge tutto `extractObject`, che da difesa secondaria è
+diventata l'unica — ed è il motivo per cui è coperto caso per caso.
+
+La stessa chiamata ha confermato che il prompt della cattura funziona: dalla
+frase «Devo finire il capitolo 3 della tesi entro venerdì, sono circa due ore,
+e ricordami di chiamare l'idraulico. Il capitolo sui metodi l'ho già fatto.»
+il modello ha restituito tre proposte corrette — un `completa` sul task
+esistente e due `crea` con progetto, scadenza, stima ed energia. Quella
+risposta è ora **un test**, copiata letteralmente: vale più di un finto,
+perché è la forma che arriva davvero, campi facoltativi omessi compresi.
+
+### Verificato nel browser
+
+Con le route AI intercettate (per non spendere token guardando l'interfaccia):
+cattura → revisione → il contatore passa da «Applica 2» a «Applica 3» quando
+si accetta anche l'eliminazione; planner AI → «Metti 3 · 5h 15m»; planner
+manuale → «Metti 2 · 2h 35m»; analisi OKR con riformulazione applicabile;
+bottom-sheet su 390px. Nessun errore in console.
+
+Due ritocchi nati dagli screenshot: le date nei motivi si leggono ora come si
+direbbero a voce («scade dopodomani», non «scade il 2026-07-31»), e «1
+blocchi» è diventato «1 blocco».
+
+### Resta da fare
+- Il rituale di **shutdown** userà `app/api/ai/shutdown` — la route c'è ed è
+  già difensiva sugli orari fuori dagli spazi liberi, l'interfaccia arriva col
+  passo 12.
+- Il **kickoff** con confronto storico, sempre passo 12.

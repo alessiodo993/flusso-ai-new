@@ -51,10 +51,7 @@ export function CaptureBar({
   // La palette e il FAB possono chiedere il fuoco su questa barra.
   useFlussoEvent(
     "flusso:quick-capture",
-    useCallback(({ voice }) => {
-      if (voice) return;
-      inputRef.current?.focus();
-    }, []),
+    useCallback(() => inputRef.current?.focus(), []),
   );
 
   const detailsVisible = variant === "task" && title.trim().length > 0;
@@ -98,7 +95,7 @@ export function CaptureBar({
           className="icon-btn shrink-0"
           aria-label="Interpreta con l'AI"
           title="Interpreta con l'AI"
-          onClick={() => emit("flusso:quick-capture", { voice: false })}
+          onClick={() => emit("flusso:magic-capture", { voice: false })}
         >
           <Wand2 className="size-[18px]" />
         </button>

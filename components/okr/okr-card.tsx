@@ -6,6 +6,7 @@ import {
   Minus,
   Pencil,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -37,6 +38,7 @@ export function OkrCard({
   tasks,
   onStep,
   onEdit,
+  onAnalyze,
   onDelete,
 }: {
   okr: Okr;
@@ -44,6 +46,7 @@ export function OkrCard({
   tasks: Task[];
   onStep: (keyResultId: string, current: number) => void;
   onEdit: (okr: Okr) => void;
+  onAnalyze: (okr: Okr) => void;
   onDelete: (okr: Okr) => void;
 }) {
   const [open, setOpen] = useState(true);
@@ -109,6 +112,17 @@ export function OkrCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5">
+          {okr.key_results.length > 0 && (
+            <button
+              type="button"
+              className="icon-btn icon-btn-sm"
+              aria-label={`Analizza i risultati chiave di «${okr.objective}»`}
+              title="Sono misurabili?"
+              onClick={() => onAnalyze(okr)}
+            >
+              <Sparkles className="size-4" />
+            </button>
+          )}
           <button
             type="button"
             className="icon-btn icon-btn-sm"

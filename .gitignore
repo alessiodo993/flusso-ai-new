@@ -42,3 +42,6 @@ next-env.d.ts
 
 # env files (.env.example va committato: è la mappa delle chiavi, non le chiavi)
 !.env.example
+
+# file temporanei di verifica (screenshot, probe)
+/.tmp/

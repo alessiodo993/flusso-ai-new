@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Lightbulb,
   ListChecks,
+  Mic,
   Moon,
   Play,
   Plus,
@@ -86,11 +87,18 @@ export function CommandPalette() {
         },
       },
       {
+        id: "cattura-magica",
+        label: "Cattura magica",
+        hint: "Scrivi o detta, interpreta l'AI",
+        Icon: Wand2,
+        run: () => emit("flusso:magic-capture", {}),
+      },
+      {
         id: "cattura-voce",
         label: "Cattura a voce",
         hint: "Detta e lascia interpretare all'AI",
-        Icon: Wand2,
-        run: () => emit("flusso:quick-capture", { voice: true }),
+        Icon: Mic,
+        run: () => emit("flusso:magic-capture", { voice: true }),
       },
       {
         id: "pianifica",

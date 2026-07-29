@@ -4,6 +4,8 @@ import { PanelLeftOpen } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
+import { MagicCapture } from "@/components/ai/magic-capture";
+import { PlannerSheet } from "@/components/ai/planner-sheet";
 import { CalendarSection } from "@/components/calendar/calendar-section";
 import { FlussoDndProvider } from "@/components/dnd/flusso-dnd";
 import { CalibrationSheet } from "@/components/calibration/calibration-sheet";
@@ -162,6 +164,8 @@ export function AppShell() {
         <BottomNav section={section} onSelect={setSection} />
         <QuickCaptureFab />
         <CommandPalette />
+        <MagicCapture />
+        <PlannerSheet />
         <FocusOverlay />
         <PostponeDialog />
         <CalibrationSheet />

@@ -3,6 +3,7 @@
 import { Copy, Plus, Target } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { OkrAnalysisSheet } from "@/components/ai/okr-analysis-sheet";
 import { OkrCard } from "@/components/okr/okr-card";
 import { OkrEditor } from "@/components/okr/okr-editor";
 import { RhythmDashboard } from "@/components/okr/rhythm-dashboard";
@@ -44,6 +45,7 @@ export function OkrSection() {
   const [quarter, setQuarter] = useState(currentQuarter());
   const [editing, setEditing] = useState<Okr | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [analyzing, setAnalyzing] = useState<Okr | null>(null);
 
   const { okrs, isLoading, isError, error, refetch } = useOkrs(quarter);
   const { byId: projectsById } = useProjects();
@@ -173,6 +175,7 @@ export function OkrSection() {
             stepKeyResult.mutate({ okrId: okr.id, keyResultId, current })
           }
           onEdit={openEditor}
+          onAnalyze={setAnalyzing}
           onDelete={(one) => {
             remove.mutate({ id: one.id });
             undoableToast({
@@ -187,6 +190,18 @@ export function OkrSection() {
           }}
         />
       ))}
+
+      <OkrAnalysisSheet
+        okr={analyzing}
+        open={analyzing !== null}
+        onOpenChange={(next) => !next && setAnalyzing(null)}
+        onRewrite={(keyResults) => {
+          if (!analyzing) return;
+          update.mutate({ id: analyzing.id, key_results: keyResults });
+          // Anche il pannello deve mostrare il nuovo testo, non quello vecchio.
+          setAnalyzing({ ...analyzing, key_results: keyResults });
+        }}
+      />
 
       <OkrEditor
         okr={editing}

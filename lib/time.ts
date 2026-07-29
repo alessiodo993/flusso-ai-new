@@ -181,6 +181,12 @@ export function snapDown(minute: number, step: number = SLOT): number {
   return Math.floor(minute / s) * s;
 }
 
+/** Arrotonda per eccesso al passo indicato. */
+export function snapUp(minute: number, step: number = SLOT): number {
+  const s = step > 0 ? step : SLOT;
+  return Math.ceil(minute / s) * s;
+}
+
 /** Vero se i due intervalli si sovrappongono: gli estremi che si toccano no. */
 export function overlaps(a: MinuteRange, b: MinuteRange): boolean {
   return a.start < b.end && b.start < a.end;
