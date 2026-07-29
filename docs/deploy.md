@@ -68,12 +68,13 @@ Se vuoi Google Calendar, aggiungi anche:
 | `GOOGLE_CLIENT_ID` | dal client OAuth "Web application" |
 | `GOOGLE_CLIENT_SECRET` | idem |
 | `GOOGLE_TOKEN_SECRET` | una stringa casuale lunga, la generi tu |
-| `GOOGLE_WEBHOOK_SECRET` | un'altra stringa casuale |
 
-Per le due stringhe casuali va bene qualunque cosa lunga e senza senso: aprile
-da un generatore di password, 40 caratteri. Servono a **cifrare i token
-Google** e a firmare i canali di notifica: se cambiano, gli account Google
-vanno ricollegati, quindi salvale in un posto sicuro.
+`GOOGLE_TOKEN_SECRET` fa due lavori: **cifra i token Google** salvati nel
+database e **firma** i canali di notifica, così una richiesta che dice di
+venire da Google e non porta la firma giusta viene scartata. Generala con
+`openssl rand -base64 32`, oppure prendi 40 caratteri casuali da un
+generatore di password. Se la cambi, gli account Google vanno ricollegati:
+salvala in un posto sicuro.
 
 ## Passo 4 — Pubblica
 
