@@ -132,6 +132,11 @@ export const TaskBlock = memo(function TaskBlock({
       className={cn(
         "absolute overflow-hidden rounded-flusso-sm text-left",
         "touch-none select-none",
+        // La mano che afferra è l'altra metà del segnale: sull'evento Google il
+        // cursore resta la freccia. Prima erano `auto` e `default`, che
+        // disegnano la stessa freccia: la distinzione era scritta nel codice e
+        // invisibile a schermo.
+        "cursor-grab active:cursor-grabbing",
         isDragging && "opacity-30",
       )}
       data-blocco="task"

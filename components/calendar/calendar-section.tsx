@@ -7,6 +7,7 @@ import { DayGrid } from "@/components/calendar/day-grid";
 import { WeekView } from "@/components/calendar/week-view";
 import { DayStrip } from "@/components/calendar/day-strip";
 import { AllDayStrip } from "@/components/calendar/google-event-block";
+import { GoogleLegend } from "@/components/calendar/google-legend";
 import { GoogleReconnectBanner } from "@/components/calendar/google-reconnect-banner";
 import { NotificationOptIn } from "@/components/calendar/notification-opt-in";
 import { RitualPrompt } from "@/components/rituals/ritual-prompt";
@@ -219,6 +220,8 @@ export function CalendarSection() {
               </button>
             </div>
           )}
+
+          <GoogleLegend show={googleEvents.length > 0} />
 
           <AllDayStrip
             events={allDayEvents}

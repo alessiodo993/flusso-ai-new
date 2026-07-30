@@ -3,6 +3,7 @@
 import { CalendarDays, Sparkles } from "lucide-react";
 import { useCallback, useMemo } from "react";
 
+import { GOOGLE_SOURCE } from "@/components/calendar/google-event-block";
 import { layoutOverlaps } from "@/lib/calendar-layout";
 import {
   blockSurface,
@@ -239,7 +240,12 @@ export function WeekView({
                     return (
                       <div
                         key={item.id}
-                        title={`${fmtMin(start)} · ${item.title}`}
+                        // La provenienza sta nel titolo del tooltip: in una
+                        // colonna larga un settimo di schermo non c'è spazio
+                        // per scriverla, e la cornice la lascia intuire senza
+                        // dirla.
+                        title={`Da ${GOOGLE_SOURCE} · ${calendario?.name ?? GOOGLE_SOURCE} · ${fmtMin(start)} · ${item.title}`}
+                        aria-label={`Da ${GOOGLE_SOURCE}: ${item.title}, ${fmtMin(start)}`}
                         className="absolute overflow-hidden rounded-[3px] border border-l-[3px] px-0.5 text-[10px] leading-tight"
                         style={{
                           top,

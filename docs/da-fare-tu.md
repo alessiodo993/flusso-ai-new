@@ -458,6 +458,21 @@ La scrittura verso Google resta **spenta**. Quando la accendi, l'app chiede una
 conferma esplicita: da quel momento un blocco che sposti qui cambia un evento
 là, e può essere sotto gli occhi di altre persone.
 
+**Come riconoscere sul calendario cosa viene da Google.** Sono due famiglie
+diverse a vedersi, non solo a sapersi:
+
+| | Blocchi tuoi | Eventi da Google |
+|---|---|---|
+| Aspetto | forma a **colore pieno** | **scheda** con cornice e barra laterale |
+| Icona | nessuna (una stella se è l'Highlight) | 🗓 orologio-calendario |
+| Sotto il titolo | l'orario | l'orario **e il nome del calendario** |
+| Trascinabile | sì, il cursore diventa una mano | no, il cursore resta la freccia |
+
+Si spostano da Google, non da qui: Flusso li tratta come ostacoli invalicabili
+quando pianifica. La spunta che puoi mettergli è **solo tua** e non torna
+indietro a Google. La prima volta che apri un giorno con eventi Google compare
+una riga che spiega questa differenza: leggila e chiudila, non torna più.
+
 ---
 
 # PARTE 7 — Il collaudo: dieci prove
