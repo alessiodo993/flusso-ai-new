@@ -8,6 +8,7 @@ import {
   maskSecret,
   verifyCredentials,
 } from "@/lib/google/credentials";
+import { secretKey } from "@/lib/google/crypto";
 import { redirectUri } from "@/lib/google/oauth";
 import { currentUser } from "@/lib/supabase/server";
 import type { GoogleConfigReport } from "@/lib/types";
@@ -38,9 +39,24 @@ export async function GET(request: NextRequest) {
     "GOOGLE_CLIENT_SECRET",
   );
 
+  /*
+   * `GOOGLE_TOKEN_SECRET` va provata **usandola**, non guardandola: è la
+   * chiave con cui i token vengono cifrati, e se non è utilizzabile il
+   * collegamento fallisce dopo il consenso — cioè nel punto in cui l'utente
+   * crede di aver finito.
+   */
+  let tokenSecretProblem: string | null = null;
+  try {
+    secretKey();
+  } catch (error) {
+    tokenSecretProblem =
+      error instanceof Error ? error.message : "GOOGLE_TOKEN_SECRET non valida.";
+  }
+
   const problemi = [
     clientIdProblem(clientId),
     clientSecretProblem(clientSecret),
+    tokenSecretProblem,
   ].filter((one): one is string => one !== null);
 
   // `APP_URL` assente non è un errore in locale, ma in produzione manda Google
@@ -66,6 +82,7 @@ export async function GET(request: NextRequest) {
   const report: GoogleConfigReport = {
     clientId: clientId || null,
     clientSecret: clientSecret ? maskSecret(clientSecret) : null,
+    tokenSecret: tokenSecretProblem ? "assente" : "ok",
     redirectUri: uri,
     appUrl: configuredAppUrl || appUrl(),
     appUrlConfigurato: configuredAppUrl.length > 0,

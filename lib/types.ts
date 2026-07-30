@@ -278,6 +278,8 @@ export type GoogleConfigReport = {
   clientId: string | null;
   /** Mascherato: qui basta sapere se c'è. */
   clientSecret: string | null;
+  /** Solo lo stato: il valore non esce mai, nemmeno mascherato. */
+  tokenSecret: "assente" | "ok";
   redirectUri: string;
   appUrl: string;
   appUrlConfigurato: boolean;

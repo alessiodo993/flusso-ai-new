@@ -131,8 +131,15 @@ function explain(error: unknown, origin: string): string {
   if (message.includes("invalid_client")) {
     return googleError("invalid_client", origin);
   }
+  /*
+   * `mancante` e non solo il nome della variabile. Con il solo nome, un
+   * messaggio che spiegava benissimo il problema — «GOOGLE_TOKEN_SECRET è
+   * troppo corta» — veniva riscritto in «manca GOOGLE_TOKEN_SECRET», cioè in
+   * una bugia: la variabile c'era. È successo davvero, e ha mandato a cercare
+   * su Vercel una cosa che era già lì.
+   */
   for (const name of ["GOOGLE_CLIENT_SECRET", "GOOGLE_TOKEN_SECRET"]) {
-    if (message.includes(name)) {
+    if (message.includes(name) && message.includes("mancante")) {
       return `Manca ${name} fra le variabili d'ambiente su Vercel: aggiungila e ripubblica.`;
     }
   }

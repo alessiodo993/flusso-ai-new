@@ -1,4 +1,9 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from "node:crypto";
 
 /**
  * Cifratura dei token Google prima di scriverli nel database.
@@ -14,21 +19,52 @@ const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 const KEY_LENGTH = 32;
 
-function secretKey(): Buffer {
-  const raw = process.env.GOOGLE_TOKEN_SECRET;
+/** Sotto questa soglia una stringa non ha abbastanza entropia per fare da chiave. */
+export const MIN_SECRET_LENGTH = 24;
+
+/** Un base64 «pulito» di esattamente 32 byte, cioè la forma canonica. */
+const BASE64_32 = /^[A-Za-z0-9+/]{43}=$/;
+
+/**
+ * La chiave di cifratura, da `GOOGLE_TOKEN_SECRET`.
+ *
+ * Accetta **due forme**, e non è indulgenza mal riposta: pretendere solo la
+ * prima ha già prodotto un guasto vero. Chi genera «una stringa casuale lunga»
+ * — quaranta caratteri da un generatore di password, che è esattamente ciò che
+ * la guida chiedeva — otteneva un rifiuto, per giunta riscritto più a valle in
+ * «manca la variabile»: il messaggio diceva di aggiungere una cosa che c'era.
+ *
+ * 1. **32 byte in base64** (`openssl rand -base64 32`): usati così come sono.
+ *    È la forma canonica, e resta bit per bit quella di prima, altrimenti i
+ *    token già cifrati diventerebbero illeggibili.
+ * 2. **Qualunque altra stringa lunga**: se ne prende lo SHA-256, che di byte
+ *    ne dà 32 esatti. La derivazione è deterministica, quindi la stessa
+ *    stringa dà sempre la stessa chiave.
+ *
+ * SHA-256 nudo va bene *qui* perché il segreto è casuale e lungo, non una
+ * password che qualcuno possa indovinare: contro un attacco a dizionario
+ * servirebbe una derivazione lenta, contro 24+ caratteri casuali no.
+ */
+export function secretKey(): Buffer {
+  const raw = (process.env.GOOGLE_TOKEN_SECRET ?? "").trim();
   if (!raw) {
     throw new Error(
       "Variabile d'ambiente mancante: GOOGLE_TOKEN_SECRET. Generala con `openssl rand -base64 32`.",
     );
   }
 
-  const key = Buffer.from(raw, "base64");
-  if (key.length !== KEY_LENGTH) {
+  if (BASE64_32.test(raw)) {
+    const key = Buffer.from(raw, "base64");
+    if (key.length === KEY_LENGTH) return key;
+  }
+
+  if (raw.length < MIN_SECRET_LENGTH) {
     throw new Error(
-      `GOOGLE_TOKEN_SECRET deve essere di 32 byte in base64, ricevuti ${key.length}. Rigenerala con \`openssl rand -base64 32\`.`,
+      `GOOGLE_TOKEN_SECRET è troppo corta: ${raw.length} caratteri, ne servono almeno ${MIN_SECRET_LENGTH}. Generala con \`openssl rand -base64 32\`.`,
     );
   }
-  return key;
+
+  return createHash("sha256").update(raw, "utf8").digest();
 }
 
 /** Cifra un token. Ogni chiamata usa un IV nuovo, quindi l'esito cambia sempre. */

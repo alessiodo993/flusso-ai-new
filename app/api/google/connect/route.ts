@@ -74,12 +74,14 @@ function explain(error: unknown, origin: string): string {
 
   const message = error instanceof Error ? error.message : String(error);
 
+  // `mancante` e non solo il nome: un messaggio che spiega *cos'altro* non va
+  // in quella variabile va lasciato passare, non riscritto in «manca».
   for (const name of [
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
     "GOOGLE_TOKEN_SECRET",
   ]) {
-    if (message.includes(name)) {
+    if (message.includes(name) && message.includes("mancante")) {
       return `Manca ${name} fra le variabili d'ambiente. Aggiungila su Vercel (Settings → Environment Variables) e ripubblica.`;
     }
   }

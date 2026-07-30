@@ -353,7 +353,14 @@ spostamenti arrivano subito invece che entro cinque minuti.
 ## Passo 5.2 — Genera la chiave di cifratura
 
 Serve una stringa casuale lunga. Non deve significare niente: deve essere
-imprevedibile. Prendi 40 caratteri da un generatore di password.
+imprevedibile. Vanno bene entrambe queste:
+
+- **almeno 24 caratteri** da un generatore di password (40 è una buona misura);
+- oppure il risultato di `openssl rand -base64 32`, se hai un terminale.
+
+Qualunque delle due, Flusso la trasforma da sé in una chiave di 32 byte. Non
+inventarla a mano e non usare una password che ricordi: qui l'unica cosa che
+conta è che nessuno possa indovinarla.
 
 A cosa serve, in concreto: i token con cui Flusso entra nel tuo calendario
 vengono salvati nel database **cifrati con questa chiave**. Chi leggesse il
@@ -489,6 +496,7 @@ secondi: quello è normale.
 | «Accesso bloccato» / «access_denied» collegando Google | la tua email non è fra i *Test users* | Parte 5.1, punto 3 |
 | **«Errore 401: invalid_client — The OAuth client was not found»** | il `GOOGLE_CLIENT_ID` su Vercel non corrisponde a nessun client OAuth: valore sbagliato, incollato con virgolette o con un a capo, oppure client cancellato | Passo 5.4: premi *Verifica le credenziali*, poi confronta col Client ID in Google Cloud |
 | Il secondo account sostituisce il primo | era un difetto nostro, corretto: «Aggiungi account» ora fa scegliere l'account | ripubblica e riprova |
+| «Manca GOOGLE_TOKEN_SECRET» dopo aver dato il consenso | o la variabile non c'è davvero su Vercel (controlla che sia sull'ambiente **Production** e che tu abbia ripubblicato **dopo** averla aggiunta), oppure c'è ma non era utilizzabile: era un difetto nostro, corretto — ora qualsiasi stringa da 24 caratteri in su va bene | *Impostazioni → Google → Configurazione OAuth*: la riga *Chiave di cifratura* dice quale dei due casi è |
 | **«Errore 400: redirect_uri_mismatch»** | l'indirizzo di ritorno non è fra gli *Authorized redirect URIs* del client OAuth. Attenzione: va in *redirect URIs*, **non** in *JavaScript origins*, ed è un errore diverso dai *Test users* — pubblicare l'app non lo risolve | Google Cloud → *Credentials* → apri il tuo client → *Authorized redirect URIs* → *Add URI* → incolla quello che Flusso ti copia dal passo 5.4 → *Save* |
 | L'app si apre ma è vuota e non salva niente | `NEXT_PUBLIC_SUPABASE_ANON_KEY` sbagliata o assente | Parte 3.3, poi Redeploy |
 | La bacchetta 🪄 dà errore | `ANTHROPIC_API_KEY` assente, o credito finito | Parte 3.3 / console Anthropic |

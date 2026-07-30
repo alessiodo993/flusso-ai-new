@@ -322,6 +322,16 @@ export function GooglePanel() {
                 label="Client secret"
                 value={config.clientSecret ?? "— assente —"}
               />
+              {/* Della chiave di cifratura non esce nulla, nemmeno mascherata:
+                  qui serve sapere solo se è utilizzabile. */}
+              <Row
+                label="Chiave di cifratura"
+                value={
+                  config.tokenSecret === "ok"
+                    ? "impostata e valida"
+                    : "— non utilizzabile —"
+                }
+              />
               {/* Copiabile perché è l'unico valore che va **trascritto** in
                   Google Cloud: uno slash finale di troppo o `http` al posto di
                   `https` bastano a far fallire il collegamento con

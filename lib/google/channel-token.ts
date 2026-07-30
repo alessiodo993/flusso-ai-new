@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import { secretKey } from "@/lib/google/crypto";
+
 /**
  * Il token che accompagna un canale di notifiche Google.
  *
@@ -13,14 +15,14 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * i nomi previsti da Next: qualunque altro export fa fallire il build.
  */
 
+/*
+ * La chiave è la stessa della cifratura, ottenuta dallo stesso codice: qui
+ * prima si faceva `Buffer.from(secret, "base64")` in proprio, e con un segreto
+ * che base64 non è Node scarta in silenzio i caratteri non validi. Ne usciva
+ * una chiave più corta del previsto, senza che niente lo segnalasse.
+ */
 function signature(userId: string): string {
-  const secret = process.env.GOOGLE_TOKEN_SECRET;
-  if (!secret) {
-    throw new Error("Variabile d'ambiente mancante: GOOGLE_TOKEN_SECRET.");
-  }
-  return createHmac("sha256", Buffer.from(secret, "base64"))
-    .update(userId)
-    .digest("base64url");
+  return createHmac("sha256", secretKey()).update(userId).digest("base64url");
 }
 
 /** `<userId>.<firma>`, da passare a Google all'apertura del canale. */

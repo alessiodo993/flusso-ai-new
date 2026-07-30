@@ -2,7 +2,12 @@ import { randomBytes } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { decryptToken, encryptToken, tryDecryptToken } from "./crypto";
+import {
+  decryptToken,
+  encryptToken,
+  secretKey,
+  tryDecryptToken,
+} from "./crypto";
 
 const ORIGINAL = process.env.GOOGLE_TOKEN_SECRET;
 const KEY = randomBytes(32).toString("base64");
@@ -83,9 +88,50 @@ describe("configurazione della chiave", () => {
     process.env.GOOGLE_TOKEN_SECRET = KEY;
   });
 
-  it("spiega cosa fare se la chiave è della lunghezza sbagliata", () => {
-    process.env.GOOGLE_TOKEN_SECRET = randomBytes(16).toString("base64");
-    expect(() => encryptToken("x")).toThrow(/32 byte/);
+  it("**la forma canonica resta identica bit per bit**", () => {
+    // Se la derivazione cambiasse anche per un base64 da 32 byte, i token già
+    // salvati diventerebbero illeggibili e ogni account andrebbe ricollegato.
+    expect(secretKey().equals(Buffer.from(KEY, "base64"))).toBe(true);
+  });
+
+  it("**accetta una stringa casuale lunga, non solo base64 da 32 byte**", () => {
+    // È il caso che la guida stessa suggeriva — «quaranta caratteri da un
+    // generatore di password» — e che veniva rifiutato, per giunta con un
+    // messaggio che diceva «manca la variabile» mentre c'era.
+    process.env.GOOGLE_TOKEN_SECRET =
+      "x7Kq-9fPz!Lm2Wn4Tb6Yv8Rd0Sg1Hj3Ck5Aq7Ze9";
+    const encrypted = encryptToken("token");
+    expect(decryptToken(encrypted)).toBe("token");
+    process.env.GOOGLE_TOKEN_SECRET = KEY;
+  });
+
+  it("la stessa stringa dà sempre la stessa chiave", () => {
+    process.env.GOOGLE_TOKEN_SECRET = "una-chiave-lunga-ma-non-base64-32";
+    const prima = secretKey();
+    process.env.GOOGLE_TOKEN_SECRET = "una-chiave-lunga-ma-non-base64-32";
+    expect(secretKey().equals(prima)).toBe(true);
+    process.env.GOOGLE_TOKEN_SECRET = KEY;
+  });
+
+  it("gli spazi intorno non cambiano la chiave", () => {
+    // Un a capo incollato per sbaglio renderebbe illeggibili i token cifrati
+    // il giorno prima, e la diagnosi sarebbe «ricollega tutti gli account».
+    process.env.GOOGLE_TOKEN_SECRET = `  ${KEY}\n`;
+    expect(secretKey().equals(Buffer.from(KEY, "base64"))).toBe(true);
+    process.env.GOOGLE_TOKEN_SECRET = KEY;
+  });
+
+  it("rifiuta una chiave troppo corta per esserlo", () => {
+    process.env.GOOGLE_TOKEN_SECRET = "segreto";
+    expect(() => encryptToken("x")).toThrow(/troppo corta/);
+    process.env.GOOGLE_TOKEN_SECRET = KEY;
+  });
+
+  it("chiavi diverse restano incompatibili fra loro", () => {
+    process.env.GOOGLE_TOKEN_SECRET = "prima-chiave-lunga-abbastanza-ok";
+    const encrypted = encryptToken("token");
+    process.env.GOOGLE_TOKEN_SECRET = "seconda-chiave-lunga-abbastanza!";
+    expect(() => decryptToken(encrypted)).toThrow();
     process.env.GOOGLE_TOKEN_SECRET = KEY;
   });
 });
