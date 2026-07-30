@@ -12,7 +12,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { ToggleRow } from "@/components/ui/toggle-row";
-import { PROJECT_COLORS, safeColor } from "@/lib/colors";
+import { PROJECT_COLORS, safeCalendarColor } from "@/lib/colors";
 import {
   useGoogleAccounts,
   useGoogleCalendars,
@@ -171,7 +171,7 @@ export function GooglePanel() {
                     <span
                       aria-hidden="true"
                       className="size-3 shrink-0 rounded-full"
-                      style={{ background: safeColor(calendar.color) }}
+                      style={{ background: safeCalendarColor(calendar.color) }}
                     />
                     <span className="min-w-0 flex-1 truncate text-sm">
                       {calendar.name}
@@ -197,13 +197,13 @@ export function GooglePanel() {
                           key={color}
                           type="button"
                           aria-label={`Colore ${color} per ${calendar.name}`}
-                          aria-pressed={safeColor(calendar.color) === color}
+                          aria-pressed={safeCalendarColor(calendar.color) === color}
                           onClick={() =>
                             updateCalendar.mutate({ id: calendar.id, color })
                           }
                           className={cn(
                             "size-6 rounded-full border-2",
-                            safeColor(calendar.color) === color
+                            safeCalendarColor(calendar.color) === color
                               ? "border-ink"
                               : "border-transparent",
                           )}

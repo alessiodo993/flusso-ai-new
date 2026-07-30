@@ -4,29 +4,52 @@
  * dalle CSS variables.
  */
 
+const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
 /**
- * Palette proposta alla creazione di un progetto: tenue, coerente col tema.
+ * Palette proposta alla creazione di un progetto: coerente col tema, ma non
+ * timida.
  *
  * Ogni valore regge **testo bianco al 4.5:1**, che è il modo in cui questi
  * colori vengono davvero usati: sfondo pieno dei blocchi sul calendario, con
- * il titolo sopra. Tre dei valori originali stavano sotto la soglia (blu
- * 4.39, cuoio 4.19, oliva 3.75) e sono stati scuriti quel poco che serve —
- * la tinta si riconosce ancora, il titolo si legge anche fuori al sole.
+ * il titolo sopra. Tutti stanno sopra il 4.85, con un margine voluto sulla
+ * soglia perché `blockSurface` non debba intervenire scurendoli.
+ *
+ * Rispetto ai primi valori la saturazione è più alta di circa un terzo, e la
+ * luminosità è stata riportata giù quel tanto che serve a tenere il margine:
+ * otto tinte spente si distinguono male fra loro proprio dove serve
+ * distinguerle, cioè in un blocco alto trenta pixel visto di sfuggita.
  */
 export const PROJECT_COLORS = [
-  "#3f6b4f", // verde bosco (accento)
-  "#577793", // blu polvere
-  "#9d6c3c", // cuoio
-  "#8a5b7a", // prugna
-  "#4f7d78", // verde acqua
-  "#9a5a4a", // terracotta
-  "#6b6f8a", // ardesia
-  "#6f7a41", // oliva
+  "#39724e", // verde bosco (accento)
+  "#4c7599", // blu polvere
+  "#9e632a", // cuoio
+  "#90537c", // prugna
+  "#427a75", // verde acqua
+  "#a85540", // terracotta
+  "#686d90", // ardesia
+  "#6a7733", // oliva
 ] as const;
 
 export const DEFAULT_PROJECT_COLOR = PROJECT_COLORS[0];
 
-const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+/**
+ * Il colore di ripiego per un calendario Google senza colore proprio.
+ *
+ * **Non** è il verde di Flusso, ed è la differenza che conta: con il default
+ * dei progetti, un calendario non ancora configurato si presentava esattamente
+ * del colore dei blocchi decisi da te. Un blu freddo dice «viene da fuori»
+ * prima ancora che si legga il titolo.
+ */
+export const EXTERNAL_COLOR = "#4c7599";
+
+/** Come `safeColor`, ma per i calendari: ripiega sul colore «esterno». */
+export function safeCalendarColor(value: string | null | undefined): string {
+  if (typeof value !== "string" || !HEX.test(value.trim())) {
+    return EXTERNAL_COLOR;
+  }
+  return safeColor(value);
+}
 
 /** Normalizza un colore utente, con ripiego sul colore di default. */
 export function safeColor(value: string | null | undefined): string {
@@ -54,6 +77,46 @@ export function withAlpha(hex: string, alpha: number): string {
   const [r, g, b] = channels(hex);
   const a = Math.min(1, Math.max(0, alpha));
   return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
+/**
+ * Lo sfondo di un evento Google: **opaco**, non una velatura.
+ *
+ * La differenza è tutta qui. Una velatura al 14% assume il colore di ciò che
+ * ha sotto, e sotto c'è la fascia di picco: un evento tenue su una fascia
+ * tenue diventava una macchia sola, senza inizio né fine. Un colore pieno
+ * sopra la superficie del tema, invece, si stacca sempre — dalla fascia, dalle
+ * ore fuori orario, da qualunque cosa venga aggiunta domani.
+ *
+ * Resta comunque **tenue**: il colore pieno è la firma dei blocchi decisi da
+ * te. Un evento che subisci si distingue per la forma — superficie chiara,
+ * barra laterale colorata — non per l'intensità.
+ */
+export function eventSurface(
+  value: string | null | undefined,
+  dimmed = false,
+): string {
+  return tintedSurface(safeCalendarColor(value), dimmed ? 0.08 : 0.17);
+}
+
+/**
+ * Lo sfondo di un blocco già fatto: spento, ma **opaco** anche lui.
+ *
+ * Era una velatura al 22%, cioè la stessa tecnica degli eventi Google, e ne
+ * seguiva lo stesso guaio al quadrato: un task completato sopra la fascia di
+ * picco assumeva il colore della fascia *ed* era indistinguibile da una
+ * riunione. Restano due segnali a separarli: qui il riempimento è più deciso e
+ * non c'è cornice — i blocchi di Flusso sono forme piene, gli eventi che
+ * subisci sono schede con un bordo.
+ */
+export function doneSurface(value: string | null | undefined): string {
+  return tintedSurface(safeColor(value), 0.3);
+}
+
+/** Una tinta stesa sopra la superficie del tema: il risultato è opaco. */
+function tintedSurface(hex: string, alpha: number): string {
+  const tint = withAlpha(hex, alpha);
+  return `linear-gradient(${tint}, ${tint}), var(--surface)`;
 }
 
 /** Luminanza relativa secondo WCAG. */
@@ -204,5 +267,5 @@ function hsl(hex: string): { h: number; s: number; l: number } {
 
 /** Il colore esadecimale di un `colorId` Google, per il default dei calendari. */
 export function fromGoogleColorId(id: string | null | undefined): string {
-  return (id && GOOGLE_EVENT_COLORS[id]) || DEFAULT_PROJECT_COLOR;
+  return (id && GOOGLE_EVENT_COLORS[id]) || EXTERNAL_COLOR;
 }

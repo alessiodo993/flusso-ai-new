@@ -3,7 +3,7 @@
 import { Check } from "lucide-react";
 import { memo } from "react";
 
-import { safeColor, withAlpha } from "@/lib/colors";
+import { eventSurface, safeCalendarColor, withAlpha } from "@/lib/colors";
 import { fmtMin } from "@/lib/time";
 import type { GoogleCalendar, GoogleEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,7 @@ export const GoogleEventBlock = memo(function GoogleEventBlock({
   width: number;
   onToggleDone: (event: GoogleEvent) => void;
 }) {
-  const color = safeColor(calendar?.color);
+  const color = safeCalendarColor(calendar?.color);
 
   return (
     <div
@@ -44,12 +44,20 @@ export const GoogleEventBlock = memo(function GoogleEventBlock({
         width: `calc(${width}% - 3px)`,
         // Come per i task: un evento spuntato si smorza nello sfondo, non
         // nel testo, che deve restare leggibile.
-        background: withAlpha(color, event.local_done ? 0.07 : 0.14),
+        background: eventSurface(calendar?.color, event.local_done),
+        // Il filetto tutt'intorno chiude la card: senza, su una fascia
+        // colorata il bordo dell'evento è solo il punto in cui una tinta
+        // finisce e ne comincia un'altra.
+        borderColor: withAlpha(color, 0.45),
         borderLeftColor: color,
       }}
       className={cn(
-        "absolute overflow-hidden rounded-flusso-sm border-l-[3px] px-1.5 py-1",
+        "absolute overflow-hidden rounded-flusso-sm border border-l-4 px-1.5 py-1",
       )}
+      // Come i blocchi task: l'altezza è la durata, quindi i comandi qui
+      // dentro ricadono nell'eccezione dichiarata sui bersagli tattili — 24px
+      // invece di 44, con l'azione equivalente a dimensione piena altrove.
+      data-blocco="google"
       title={`${event.title} · ${calendar?.name ?? "Google"}`}
     >
       <p
@@ -79,13 +87,13 @@ export const GoogleEventBlock = memo(function GoogleEventBlock({
         }
         aria-pressed={event.local_done}
         className={cn(
-          "absolute right-1 top-1 flex size-5 items-center justify-center rounded-full border",
+          "absolute right-1 top-1 flex size-6 items-center justify-center rounded-full border",
           event.local_done
             ? "border-transparent bg-accent text-accent-ink"
             : "border-line bg-surface text-ink-faint",
         )}
       >
-        <Check className="size-3" />
+        <Check className="size-3.5" />
       </button>
     </div>
   );
@@ -113,7 +121,7 @@ export function AllDayStrip({
       <span className="label shrink-0">Tutto il giorno</span>
 
       {events.map((event) => {
-        const color = safeColor(calendars.get(event.calendar_id)?.color);
+        const color = safeCalendarColor(calendars.get(event.calendar_id)?.color);
         return (
           <button
             key={event.id}
@@ -121,13 +129,18 @@ export function AllDayStrip({
             onClick={() => onToggleDone(event)}
             aria-pressed={event.local_done}
             style={{
-              // Come per i task: un evento spuntato si smorza nello sfondo, non
-        // nel testo, che deve restare leggibile.
-        background: withAlpha(color, event.local_done ? 0.07 : 0.14),
+              background: eventSurface(
+                calendars.get(event.calendar_id)?.color,
+                event.local_done,
+              ),
+              borderColor: withAlpha(color, 0.45),
               borderLeftColor: color,
             }}
             className={cn(
-              "flex min-h-7 items-center rounded-flusso-sm border-l-[3px] px-2 text-xs",
+              // Bersaglio pieno sul telefono: qui, a differenza dei blocchi
+              // orari, l'altezza non rappresenta una durata e non c'è niente
+              // da coprire. Da 1080px in su si stringe, come le altre chip.
+              "flex min-h-11 items-center rounded-flusso-sm border border-l-4 px-2.5 text-xs app:min-h-8",
               event.local_done && "text-ink-faint line-through opacity-70",
             )}
           >

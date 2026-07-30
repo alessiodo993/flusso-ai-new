@@ -4,7 +4,13 @@ import { CalendarDays, Sparkles } from "lucide-react";
 import { useCallback, useMemo } from "react";
 
 import { layoutOverlaps } from "@/lib/calendar-layout";
-import { blockSurface, safeColor, readableInk, withAlpha } from "@/lib/colors";
+import {
+  blockSurface,
+  eventSurface,
+  readableInk,
+  safeCalendarColor,
+  withAlpha,
+} from "@/lib/colors";
 import { emit } from "@/lib/events";
 import { useBlocks } from "@/lib/hooks/use-blocks";
 import { useGoogleCalendars, useGoogleEvents } from "@/lib/hooks/use-google";
@@ -228,21 +234,23 @@ export function WeekView({
                   const height = Math.max(8, (end - start) * (HOUR / 60));
 
                   if ("calendar_id" in item) {
-                    const color = safeColor(
-                      calendarsById.get(item.calendar_id)?.color,
-                    );
+                    const calendario = calendarsById.get(item.calendar_id);
+                    const color = safeCalendarColor(calendario?.color);
                     return (
                       <div
                         key={item.id}
                         title={`${fmtMin(start)} · ${item.title}`}
-                        className="absolute overflow-hidden rounded-[3px] border-l-2 px-0.5 text-[10px] leading-tight"
+                        className="absolute overflow-hidden rounded-[3px] border border-l-[3px] px-0.5 text-[10px] leading-tight"
                         style={{
                           top,
                           height,
                           left: offset,
                           width,
-                          background: withAlpha(color, 0.18),
-                          borderColor: color,
+                          // Opaco anche qui: sette colonne strette sono il
+                          // posto in cui una velatura si confonde di più.
+                          background: eventSurface(calendario?.color),
+                          borderColor: withAlpha(color, 0.45),
+                          borderLeftColor: color,
                         }}
                       >
                         <span className="line-clamp-1 text-ink-soft">

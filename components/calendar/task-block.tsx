@@ -4,7 +4,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { Check, Play, Star } from "lucide-react";
 import { memo, useCallback, useRef, useState } from "react";
 
-import { blockSurface, readableInk, withAlpha } from "@/lib/colors";
+import { blockSurface, doneSurface, readableInk } from "@/lib/colors";
 import { needsMicroStart } from "@/lib/postpone";
 import { fmtMin, snap, SLOT } from "@/lib/time";
 import type { Project, Task } from "@/lib/types";
@@ -58,7 +58,7 @@ export const TaskBlock = memo(function TaskBlock({
    * axe l'ha trovato — e un blocco completato deve restare leggibile: è
    * ancora la prova di come è andata la giornata.
    */
-  const background = done ? withAlpha(color, 0.22) : color;
+  const background = done ? doneSurface(project?.color) : color;
   const ink = done ? "var(--ink-soft)" : readableInk(color);
 
   const [preview, setPreview] = useState<number | null>(null);

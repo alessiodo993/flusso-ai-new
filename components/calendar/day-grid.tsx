@@ -125,6 +125,24 @@ export function DayGrid({
 
   const buffers = bufferStrips(taskRanges, bufferMinutes);
 
+  /*
+   * Dove scrivere «picco» nella colonna delle ore: appena sotto l'ora in cui
+   * la fascia comincia, e solo se la fascia è alta abbastanza da contenere la
+   * parola — sotto i 30px si sovrapporrebbe all'ora successiva.
+   */
+  const peakVisible =
+    peakStart !== null &&
+    peakEnd !== null &&
+    peakEnd > view.start &&
+    peakStart < view.end;
+  const peakTop = peakVisible
+    ? (Math.max(peakStart, view.start) - view.start) * px
+    : 0;
+  const peakHeight = peakVisible
+    ? (Math.min(peakEnd, view.end) - Math.max(peakStart, view.start)) * px
+    : 0;
+  const peakLabelTop = peakVisible && peakHeight > 30 ? peakTop + 6 : null;
+
   const hours: number[] = [];
   for (let m = view.start; m <= view.end; m += 60) hours.push(m);
 
@@ -145,6 +163,22 @@ export function DayGrid({
             {fmtMin(minute)}
           </div>
         ))}
+
+        {/*
+          Il nome della fascia sta **nella colonna delle ore**, non dentro la
+          fascia: là finisce sotto il primo blocco che comincia a quell'ora, ed
+          è proprio nelle giornate piene — le uniche in cui la fascia serva a
+          qualcosa — che sarebbe sempre coperto. Qui non lo copre niente.
+        */}
+        {peakLabelTop !== null && (
+          <span
+            aria-hidden="true"
+            style={{ top: peakLabelTop }}
+            className="absolute left-1.5 text-[10px] font-medium uppercase tracking-wide text-warn"
+          >
+            picco
+          </span>
+        )}
       </div>
 
       <div className="relative flex-1" style={{ height }}>
@@ -173,22 +207,20 @@ export function DayGrid({
           questo va nel calendario e non in una spiegazione altrove. Sta sotto
           tutto il resto e non intercetta il puntatore: non deve mai rubare un
           drop al blocco che copre.
+
+          Era tinta d'accento, cioè verde: la stessa famiglia dei blocchi che
+          la coprono, tanto che un task verde sopra la fascia verde sembrava
+          parte dello sfondo. Ora è sabbia, con due filetti a chiuderla: senza
+          bordi una velatura al 13% si legge come «lo schermo è sporco», non
+          come una fascia che comincia e finisce a un'ora precisa.
         */}
-        {peakStart !== null &&
-          peakEnd !== null &&
-          peakEnd > view.start &&
-          peakStart < view.end && (
-            <div
-              aria-hidden="true"
-              style={{
-                top: (Math.max(peakStart, view.start) - view.start) * px,
-                height:
-                  (Math.min(peakEnd, view.end) - Math.max(peakStart, view.start)) *
-                  px,
-              }}
-              className="pointer-events-none absolute inset-x-0 bg-accent-soft"
-            />
-          )}
+        {peakVisible && (
+          <div
+            aria-hidden="true"
+            style={{ top: peakTop, height: peakHeight }}
+            className="pointer-events-none absolute inset-x-0 border-y border-peak-line bg-peak"
+          />
+        )}
 
         {/* Fuori orario di lavoro: sfondo più cupo, senza scritte. */}
         {view.start < workStart && (

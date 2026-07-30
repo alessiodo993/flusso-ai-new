@@ -37,6 +37,16 @@
   --accent-soft: rgb(53 98 74 / 0.14);
   --accent-hover: #2b533e;
 
+  /*
+   * La fascia di picco **non può essere verde**: il verde è l'accento di
+   * Flusso ed è il colore di metà dei progetti, quindi un blocco verde sopra
+   * una fascia verde spariva dentro di essa. Sabbia calda: nessun colore
+   * della tavolozza dei progetti abita quella tinta, e il contrasto è di
+   * temperatura oltre che di valore.
+   */
+  --peak: rgb(196 150 60 / 0.13);
+  --peak-line: rgb(160 118 40 / 0.4);
+
   --warn: #855613; /* ambra: scadenze entro due giorni */
   --warn-soft: rgb(168 113 28 / 0.16);
   --danger: #9e4034; /* rosso desaturato: scadute */
@@ -73,6 +83,9 @@
   --accent-soft: rgb(125 171 138 / 0.18);
   --accent-hover: #8dbb99;
 
+  --peak: rgb(214 172 92 / 0.12);
+  --peak-line: rgb(214 172 92 / 0.35);
+
   --warn: #dcaa56;
   --warn-soft: rgb(211 162 80 / 0.2);
   /* Schiarito da #d1786b: sulla chip tinta stava a 4.17. `--danger` qui è
@@ -101,6 +114,8 @@
   --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-peak: var(--peak);
+  --color-peak-line: var(--peak-line);
 
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display-face), ui-serif, Georgia, serif;

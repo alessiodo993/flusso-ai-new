@@ -4,9 +4,13 @@ import {
   blockSurface,
   contrastRatio,
   DEFAULT_PROJECT_COLOR,
+  doneSurface,
+  EXTERNAL_COLOR,
+  eventSurface,
   fromGoogleColorId,
   PROJECT_COLORS,
   readableInk,
+  safeCalendarColor,
   safeColor,
   toGoogleColorId,
   withAlpha,
@@ -54,8 +58,53 @@ describe("la palette", () => {
     }
   });
 
+  it("tiene un margine sopra la soglia", () => {
+    // Con il minimo esatto `blockSurface` interverrebbe a scurire, e la
+    // saturazione appena guadagnata se ne andrebbe subito.
+    for (const color of PROJECT_COLORS) {
+      expect(contrastRatio("#ffffff", color)).toBeGreaterThan(4.8);
+    }
+  });
+
   it("non ha doppioni", () => {
     expect(new Set(PROJECT_COLORS).size).toBe(PROJECT_COLORS.length);
+  });
+});
+
+describe("eventSurface", () => {
+  it("**è opaco: la superficie del tema sta sotto la tinta**", () => {
+    // È l'invariante che tiene separate le tre categorie del calendario. Con
+    // una velatura semplice, un evento Google finito dentro la fascia di picco
+    // ne assumeva il colore e i due diventavano una macchia sola.
+    const background = eventSurface("#8e24aa");
+    expect(background).toContain("var(--surface)");
+    expect(background).toContain("rgba(142, 36, 170, 0.17)");
+  });
+
+  it("l'evento spuntato si smorza, non sparisce", () => {
+    expect(eventSurface("#8e24aa", true)).toContain("0.08");
+  });
+
+  it("senza colore usa quello esterno, mai il verde di Flusso", () => {
+    const background = eventSurface(null);
+    expect(background).toContain(withAlpha(EXTERNAL_COLOR, 0.17));
+    expect(background).not.toContain(withAlpha(DEFAULT_PROJECT_COLOR, 0.17));
+  });
+});
+
+describe("doneSurface", () => {
+  it("**è opaco: un task fatto non prende il colore di ciò che ha sotto**", () => {
+    const background = doneSurface("#39724e");
+    expect(background).toContain("var(--surface)");
+  });
+
+  it("riempie più di un evento Google, che è ciò che li distingue", () => {
+    // Stessa tinta, due ruoli: il blocco fatto resta una forma piena, l'evento
+    // resta una scheda. Se le due opacità si avvicinassero, l'unico segnale
+    // rimasto sarebbe la cornice.
+    const fatto = Number(/, ([\d.]+)\)/.exec(doneSurface("#39724e"))?.[1]);
+    const evento = Number(/, ([\d.]+)\)/.exec(eventSurface("#39724e"))?.[1]);
+    expect(fatto).toBeGreaterThan(evento);
   });
 });
 
@@ -161,8 +210,23 @@ describe("colori Google", () => {
     expect(toGoogleColorId("#5fd39b")).toBe("2");
   });
 
-  it("su un id sconosciuto ripiega sul default", () => {
-    expect(fromGoogleColorId("99")).toBe(DEFAULT_PROJECT_COLOR);
-    expect(fromGoogleColorId(null)).toBe(DEFAULT_PROJECT_COLOR);
+  it("**ripiega sul colore esterno, non su quello di Flusso**", () => {
+    // Con il default dei progetti un calendario Google senza colore proprio
+    // risultava dello stesso verde dei blocchi decisi dall'utente: le due
+    // categorie che il calendario deve tenere distinte diventavano identiche.
+    expect(fromGoogleColorId("99")).toBe(EXTERNAL_COLOR);
+    expect(fromGoogleColorId(null)).toBe(EXTERNAL_COLOR);
+    expect(EXTERNAL_COLOR).not.toBe(DEFAULT_PROJECT_COLOR);
+  });
+});
+
+describe("safeCalendarColor", () => {
+  it("tiene il colore del calendario quando c'è", () => {
+    expect(safeCalendarColor("#8e24aa")).toBe("#8e24aa");
+  });
+
+  it("su un colore assente o malformato dà quello esterno", () => {
+    expect(safeCalendarColor(null)).toBe(EXTERNAL_COLOR);
+    expect(safeCalendarColor("verde")).toBe(EXTERNAL_COLOR);
   });
 });

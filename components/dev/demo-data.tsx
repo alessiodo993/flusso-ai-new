@@ -11,6 +11,7 @@ import type {
   FocusSession,
   GoogleAccount,
   GoogleCalendar,
+  GoogleEvent,
   Idea,
   Okr,
   Project,
@@ -228,8 +229,28 @@ export function DemoData({ children }: { children: React.ReactNode }) {
       cal("gc3", "ga2", "Team", "#9a5a4a", true, false),
     ];
 
+    /*
+     * Gli eventi Google mancavano del tutto, e la mancanza non era innocua:
+     * l'anteprima è ciò su cui girano gli script di accessibilità e le
+     * verifiche a schermo, quindi il blocco «evento che subisci» non è mai
+     * stato guardato da nessuno dei due. Uno cade dentro la fascia di picco
+     * apposta: è lì che le tre categorie rischiano di confondersi.
+     */
+    const googleEvents: GoogleEvent[] = [
+      event("ge1", "gc1", "Dentista", today, 630, 690),
+      event("ge2", "gc3", "Riunione di reparto", today, 900, 960),
+      event("ge3", "gc1", "Compleanno di Marta", today, 0, 1440, {
+        allDay: true,
+      }),
+      event("ge4", "gc3", "Retrospettiva", addDaysISO(today, 1), 960, 1020),
+    ];
+
     queryClient.setQueryData(qk.googleAccounts, googleAccounts);
     queryClient.setQueryData(qk.googleCalendars, googleCalendars);
+    queryClient.setQueryData(
+      qk.googleEvents(addDaysISO(today, -30), addDaysISO(today, 90)),
+      googleEvents,
+    );
     queryClient.setQueryData(qk.okrs(quarter), okrs);
     queryClient.setQueryData(qk.projects, projects);
     queryClient.setQueryData(qk.focusSessions, sessions);
@@ -293,6 +314,31 @@ function task(id: string, overrides: Partial<Task>): Task {
 }
 
 /** Un calendario Google finto, con i campi che il pannello legge davvero. */
+function event(
+  id: string,
+  calendarId: string,
+  title: string,
+  day: string,
+  startMinute: number,
+  endMinute: number,
+  extra: { allDay?: boolean; done?: boolean } = {},
+): GoogleEvent {
+  return {
+    id,
+    user_id: "demo",
+    calendar_id: calendarId,
+    google_event_id: `${id}@google.com`,
+    title,
+    day,
+    start_minute: startMinute,
+    end_minute: endMinute,
+    all_day: extra.allDay ?? false,
+    local_done: extra.done ?? false,
+    updated_at: "",
+    created_at: "",
+  };
+}
+
 function cal(
   id: string,
   accountId: string,
