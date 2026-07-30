@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Copy,
   Loader2,
   Plus,
   RefreshCw,
@@ -321,7 +322,11 @@ export function GooglePanel() {
                 label="Client secret"
                 value={config.clientSecret ?? "— assente —"}
               />
-              <Row label="Redirect URI" value={config.redirectUri} />
+              {/* Copiabile perché è l'unico valore che va **trascritto** in
+                  Google Cloud: uno slash finale di troppo o `http` al posto di
+                  `https` bastano a far fallire il collegamento con
+                  `redirect_uri_mismatch`. */}
+              <Row label="Redirect URI" value={config.redirectUri} copiabile />
               <Row
                 label="APP_URL"
                 value={
@@ -366,11 +371,42 @@ export function GooglePanel() {
 }
 
 /** Una riga della diagnostica: etichetta corta, valore selezionabile. */
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  copiabile,
+}: {
+  label: string;
+  value: string;
+  copiabile?: boolean;
+}) {
   return (
     <div className="min-w-0">
       <dt className="text-xs text-ink-faint">{label}</dt>
-      <dd className="break-all font-mono text-xs">{value}</dd>
+      <dd className="flex items-start gap-2">
+        <span className="min-w-0 flex-1 break-all font-mono text-xs">
+          {value}
+        </span>
+        {copiabile && (
+          <button
+            type="button"
+            className="btn btn-ghost size-11 shrink-0"
+            aria-label={`Copia ${label}`}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(value);
+                toast.success("Copiato: incollalo in «Authorized redirect URIs».");
+              } catch {
+                // Senza HTTPS il browser nega la clipboard: dirlo è meglio che
+                // lasciar credere che la copia sia riuscita.
+                toast.error("Copia non riuscita: selezionalo e copialo a mano.");
+              }
+            }}
+          >
+            <Copy className="size-4" />
+          </button>
+        )}
+      </dd>
     </div>
   );
 }

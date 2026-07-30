@@ -399,7 +399,10 @@ risponde una di tre cose:
   giusto, oppure il client OAuth non esiste più. Torna al passo 5.1 e
   confronta carattere per carattere.
 - **«l'indirizzo di ritorno non è registrato»** → il messaggio contiene
-  l'indirizzo esatto da incollare in *Authorized redirect URIs*.
+  l'indirizzo esatto da incollare in *Authorized redirect URIs*. Accanto alla
+  riga *Redirect URI* c'è un pulsante che lo copia: usalo invece di
+  ritrascriverlo, perché uno slash finale di troppo è indistinguibile a
+  occhio e basta a far fallire tutto.
 
 È la stessa domanda che il collegamento fa a Google, fatta prima: se qui è
 verde, il problema non è nelle credenziali.
@@ -486,7 +489,7 @@ secondi: quello è normale.
 | «Accesso bloccato» / «access_denied» collegando Google | la tua email non è fra i *Test users* | Parte 5.1, punto 3 |
 | **«Errore 401: invalid_client — The OAuth client was not found»** | il `GOOGLE_CLIENT_ID` su Vercel non corrisponde a nessun client OAuth: valore sbagliato, incollato con virgolette o con un a capo, oppure client cancellato | Passo 5.4: premi *Verifica le credenziali*, poi confronta col Client ID in Google Cloud |
 | Il secondo account sostituisce il primo | era un difetto nostro, corretto: «Aggiungi account» ora fa scegliere l'account | ripubblica e riprova |
-| «redirect_uri_mismatch» | l'URI in Google Cloud non combacia | dev'essere esattamente `https://tuo-indirizzo/api/google/callback` |
+| **«Errore 400: redirect_uri_mismatch»** | l'indirizzo di ritorno non è fra gli *Authorized redirect URIs* del client OAuth. Attenzione: va in *redirect URIs*, **non** in *JavaScript origins*, ed è un errore diverso dai *Test users* — pubblicare l'app non lo risolve | Google Cloud → *Credentials* → apri il tuo client → *Authorized redirect URIs* → *Add URI* → incolla quello che Flusso ti copia dal passo 5.4 → *Save* |
 | L'app si apre ma è vuota e non salva niente | `NEXT_PUBLIC_SUPABASE_ANON_KEY` sbagliata o assente | Parte 3.3, poi Redeploy |
 | La bacchetta 🪄 dà errore | `ANTHROPIC_API_KEY` assente, o credito finito | Parte 3.3 / console Anthropic |
 | «Riconnetti *email*» in Impostazioni | l'autorizzazione Google è scaduta | premi *Riconnetti* |
