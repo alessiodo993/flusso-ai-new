@@ -98,6 +98,37 @@
   --shadow-pop: 0 2px 4px rgb(0 0 0 / 0.35), 0 16px 40px rgb(0 0 0 / 0.5);
 }
 
+/*
+ * La scala tipografica, un gradino sopra quella predefinita di Tailwind.
+ *
+ * Si cambia **qui** e non nei componenti: `text-sm` compare 99 volte e
+ * `text-xs` 57, e ritoccarle a mano avrebbe significato centocinquanta
+ * decisioni indipendenti destinate a divergere. Ridefinire la scala le fa
+ * crescere tutte insieme, mantenendo i rapporti fra i livelli.
+ *
+ * Le interlinee crescono meno della dimensione: a corpo maggiore serve
+ * proporzionalmente meno aria, altrimenti i blocchi di testo si sfaldano.
+ *
+ * Questo blocco **non è `inline`**, a differenza di quello dei colori: così i
+ * valori restano leggibili come `var(--text-base)` anche fuori dalle utility,
+ * e `--row-line` può derivare da lì invece di ricopiare il numero. Con
+ * `inline` Tailwind sostituisce il valore e non emette la variabile: era
+ * questo il motivo per cui l'allineamento dei controlli di riga era scritto a
+ * mano, e per cui è rimasto indietro quando il corpo del testo è cresciuto.
+ */
+@theme {
+  --text-xs: 0.8125rem; /* 13px, era 12 */
+  --text-xs--line-height: 1.35;
+  --text-sm: 0.9375rem; /* 15px, era 14 */
+  --text-sm--line-height: 1.45;
+  --text-base: 1.0625rem; /* 17px, era 16 */
+  --text-base--line-height: 1.5;
+  --text-lg: 1.1875rem; /* 19px, era 18 */
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.375rem; /* 22px, era 20 */
+  --text-xl--line-height: 1.3;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -119,28 +150,6 @@
 
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display-face), ui-serif, Georgia, serif;
-
-  /*
-   * La scala tipografica, un gradino sopra quella predefinita di Tailwind.
-   *
-   * Si cambia **qui** e non nei componenti: `text-sm` compare 99 volte e
-   * `text-xs` 57, e ritoccarle a mano avrebbe significato centocinquanta
-   * decisioni indipendenti destinate a divergere. Ridefinire la scala le fa
-   * crescere tutte insieme, mantenendo i rapporti fra i livelli.
-   *
-   * Le interlinee crescono meno della dimensione: a corpo maggiore serve
-   * proporzionalmente meno aria, altrimenti i blocchi di testo si sfaldano.
-   */
-  --text-xs: 0.8125rem; /* 13px, era 12 */
-  --text-xs--line-height: 1.35;
-  --text-sm: 0.9375rem; /* 15px, era 14 */
-  --text-sm--line-height: 1.45;
-  --text-base: 1.0625rem; /* 17px, era 16 */
-  --text-base--line-height: 1.5;
-  --text-lg: 1.1875rem; /* 19px, era 18 */
-  --text-lg--line-height: 1.4;
-  --text-xl: 1.375rem; /* 22px, era 20 */
-  --text-xl--line-height: 1.3;
 
   --radius-flusso: var(--radius);
   --radius-flusso-sm: var(--radius-sm);
@@ -468,6 +477,35 @@
     border-color: transparent;
     padding-left: 0;
     padding-right: 0;
+  }
+
+  /* --- Righe di lista ---------------------------------------------------- */
+  /*
+   * Il titolo di una voce di lista e l'altezza a cui allineare i controlli che
+   * gli stanno accanto: due regole vicine perché sono **la stessa misura**.
+   *
+   * Tenerle separate è esattamente il difetto che ha disallineato il quadratino
+   * di completamento: l'allineamento era un `margin-top` scritto a mano,
+   * misurato su un corpo di testo più piccolo, e quando la scala tipografica è
+   * cresciuta il quadratino è rimasto quattro pixel più in basso del titolo.
+   * Ora deriva da `--text-base`: cambiare il corpo muove entrambi.
+   */
+  .row-title {
+    font-size: var(--text-base);
+    line-height: 1.375;
+  }
+
+  .row-lead {
+    display: flex;
+    flex: none;
+    align-items: center;
+    /*
+     * Alto **una riga di titolo**: i controlli si centrano su quella e non sul
+     * blocco intero, così un titolo che va a capo — o le chip sotto di esso —
+     * li lascia in alto, dove li si cerca. Un comando più alto di una riga
+     * sborda in modo simmetrico e resta centrato.
+     */
+    height: calc(var(--text-base) * 1.375);
   }
 
   /* --- Testo ------------------------------------------------------------- */

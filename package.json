@@ -13,6 +13,7 @@
     "shots": "node scripts/screenshot.mjs",
     "a11y": "node scripts/a11y.mjs",
     "keyboard": "node scripts/keyboard.mjs",
+    "allineamento": "node scripts/allineamento.mjs",
     "deploy": "bash scripts/deploy-vercel.sh",
     "db:setup-check": "bash scripts/setup-sql-check.sh"
   },

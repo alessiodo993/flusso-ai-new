@@ -83,37 +83,43 @@ export const TaskCard = memo(function TaskCard({
         items={menuItems}
         title={task.title}
         className={cn(
-          "flex items-start gap-1 py-1.5 pr-2 transition-colors duration-150 ease-out",
+          "flex items-start gap-1 py-2.5 pr-2 transition-colors duration-150 ease-out",
           selected && "bg-accent-soft",
         )}
       >
-        <button
-          type="button"
-          className="icon-btn icon-btn-sm mt-1.5 shrink-0 cursor-grab touch-none text-ink-faint active:cursor-grabbing"
-          aria-label={`Trascina «${task.title}» sul calendario`}
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="size-4" />
-        </button>
+        <span className="row-lead">
+          <button
+            type="button"
+            className="icon-btn icon-btn-sm cursor-grab touch-none text-ink-faint active:cursor-grabbing"
+            aria-label={`Trascina «${task.title}» sul calendario`}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        </span>
 
         {/* La barra del colore del progetto, a filo del bordo sinistro. */}
         <span
           aria-hidden="true"
-          className="my-1 w-[3px] shrink-0 self-stretch rounded-full"
+          className="w-[3px] shrink-0 self-stretch rounded-full"
           style={{ background: safeColor(project?.color) }}
           title={project?.name}
         />
 
-        <input
-          type="checkbox"
-          checked={done}
-          onChange={() => onToggleDone(task)}
-          aria-label={done ? `Riapri «${task.title}»` : `Segna «${task.title}» come fatto`}
-          className="mt-2.5 size-5 shrink-0 accent-[var(--accent)]"
-        />
+        {/* `row-lead` e non un margine: il quadratino si centra sulla prima
+            riga del titolo per costruzione, qualunque sia il corpo del testo. */}
+        <span className="row-lead">
+          <input
+            type="checkbox"
+            checked={done}
+            onChange={() => onToggleDone(task)}
+            aria-label={done ? `Riapri «${task.title}»` : `Segna «${task.title}» come fatto`}
+            className="size-5 accent-[var(--accent)]"
+          />
+        </span>
 
-        <div className="min-w-0 flex-1 py-1">
+        <div className="min-w-0 flex-1">
           {editing ? (
             <input
               autoFocus
@@ -134,7 +140,7 @@ export const TaskCard = memo(function TaskCard({
             <button
               type="button"
               className={cn(
-                "block w-full text-balance text-left text-base leading-snug",
+                "row-title block w-full text-balance text-left",
                 done && "text-ink-faint line-through",
               )}
               {...titleHandlers}
@@ -152,7 +158,7 @@ export const TaskCard = memo(function TaskCard({
           <TaskMetaChips task={task} today={today} className="mt-1.5" />
         </div>
 
-        <div className="flex shrink-0 items-center gap-0.5 pt-1">
+        <div className="row-lead gap-0.5">
           <button
             type="button"
             className="icon-btn icon-btn-sm"
