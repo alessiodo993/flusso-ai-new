@@ -10,6 +10,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL(".", import.meta.url)),
+      // Vedi tests/server-only-stub.ts: senza, i moduli server non si testano.
+      "server-only": fileURLToPath(
+        new URL("./tests/server-only-stub.ts", import.meta.url),
+      ),
     },
   },
 });

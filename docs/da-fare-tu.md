@@ -447,10 +447,17 @@ secondi: quello è normale.
 
 ## Se qualcosa non va
 
+> **Da ora gli errori di Google si vedono.** Quando il collegamento non
+> riesce, tornando sull'app compare un messaggio che dice *cosa* fare — quale
+> variabile manca, quale indirizzo non combacia, dove aggiungere la tua email.
+> Resta lì finché non lo chiudi. Se ne vedi uno, riportamelo com'è.
+
 | Sintomo | Causa quasi certa | Rimedio |
 |---|---|---|
 | Il link della mail porta su `localhost` | manca il *Site URL* | Parte 4 |
-| «Accesso bloccato» collegando Google | la tua email non è fra i *Test users* | Parte 5.1, punto 3 |
+| «Accesso bloccato» / «access_denied» collegando Google | la tua email non è fra i *Test users* | Parte 5.1, punto 3 |
+| Il secondo account sostituisce il primo | era un difetto nostro, corretto: «Aggiungi account» ora fa scegliere l'account | ripubblica e riprova |
+| «redirect_uri_mismatch» | l'URI in Google Cloud non combacia | dev'essere esattamente `https://tuo-indirizzo/api/google/callback` |
 | L'app si apre ma è vuota e non salva niente | `NEXT_PUBLIC_SUPABASE_ANON_KEY` sbagliata o assente | Parte 3.3, poi Redeploy |
 | La bacchetta 🪄 dà errore | `ANTHROPIC_API_KEY` assente, o credito finito | Parte 3.3 / console Anthropic |
 | «Riconnetti *email*» in Impostazioni | l'autorizzazione Google è scaduta | premi *Riconnetti* |

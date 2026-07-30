@@ -26,6 +26,7 @@ import { useFlussoEvent, type ListFilter, type Section } from "@/lib/events";
 import { useGoogleCalendars, useGoogleSync } from "@/lib/hooks/use-google";
 import { useGooglePolling } from "@/lib/hooks/use-google-polling";
 import { useDecaySweep } from "@/lib/hooks/use-decay-sweep";
+import { useGoogleOutcome } from "@/lib/hooks/use-google-outcome";
 import { useSnooze } from "@/lib/hooks/use-snooze";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,9 @@ export function AppShell() {
 
   // «Rimanda 15 min» premuto sulla notifica, anche ad app chiusa.
   useSnooze();
+
+  // L'esito del ritorno da Google, che altrimenti resterebbe solo nell'URL.
+  useGoogleOutcome();
 
   const setSection = useCallback((next: Section) => {
     setSectionState(next);

@@ -7,7 +7,15 @@ import { qk } from "@/lib/hooks/query-keys";
 import { FALLBACK_SETTINGS } from "@/lib/hooks/use-settings";
 import { addDaysISO, todayISO } from "@/lib/time";
 import { quarterOf } from "@/lib/time";
-import type { FocusSession, Idea, Okr, Project, Task } from "@/lib/types";
+import type {
+  FocusSession,
+  GoogleAccount,
+  GoogleCalendar,
+  Idea,
+  Okr,
+  Project,
+  Task,
+} from "@/lib/types";
 
 /**
  * Riempie la cache di TanStack Query con dati verosimili, senza toccare la
@@ -187,6 +195,41 @@ export function DemoData({ children }: { children: React.ReactNode }) {
       },
     ];
 
+    /*
+     * Due account Google, di cui uno scaduto: senza, il pannello Google resta
+     * nello stato vuoto e non si vedono né «Aggiungi account» né il banner di
+     * riconnessione — cioè proprio i due punti in cui il collegamento si è
+     * rotto.
+     */
+    const googleAccounts: GoogleAccount[] = [
+      {
+        id: "ga1",
+        user_id: "demo",
+        email: "alessio@esempio.it",
+        scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+        token_expires_at: null,
+        needs_reconnect: false,
+        created_at: "",
+      },
+      {
+        id: "ga2",
+        user_id: "demo",
+        email: "alessio@lavoro.esempio.it",
+        scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
+        token_expires_at: null,
+        needs_reconnect: true,
+        created_at: "",
+      },
+    ];
+
+    const googleCalendars: GoogleCalendar[] = [
+      cal("gc1", "ga1", "Personale", "#5b7c99", true, true),
+      cal("gc2", "ga1", "Compleanni", "#8a5b7a", false, false),
+      cal("gc3", "ga2", "Team", "#9a5a4a", true, false),
+    ];
+
+    queryClient.setQueryData(qk.googleAccounts, googleAccounts);
+    queryClient.setQueryData(qk.googleCalendars, googleCalendars);
     queryClient.setQueryData(qk.okrs(quarter), okrs);
     queryClient.setQueryData(qk.projects, projects);
     queryClient.setQueryData(qk.focusSessions, sessions);
@@ -246,5 +289,32 @@ function task(id: string, overrides: Partial<Task>): Task {
     status_review: "active",
     google_event_id: null,
     ...overrides,
+  };
+}
+
+/** Un calendario Google finto, con i campi che il pannello legge davvero. */
+function cal(
+  id: string,
+  accountId: string,
+  name: string,
+  color: string,
+  enabled: boolean,
+  writeTarget: boolean,
+): GoogleCalendar {
+  return {
+    id,
+    user_id: "demo",
+    account_id: accountId,
+    google_calendar_id: `${id}@group.calendar.google.com`,
+    name,
+    color,
+    enabled,
+    is_write_target: writeTarget,
+    sync_token: null,
+    last_synced_at: null,
+    created_at: "",
+    channel_id: null,
+    channel_resource_id: null,
+    channel_expires_at: null,
   };
 }

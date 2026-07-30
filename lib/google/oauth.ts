@@ -58,10 +58,13 @@ export function authorizationUrl({
   state,
   canWrite,
   addAnotherAccount,
+  loginHint,
 }: {
   state: string;
   canWrite: boolean;
   addAnotherAccount: boolean;
+  /** L'email da riconnettere: fa aprire Google già sull'account giusto. */
+  loginHint?: string | null;
 }): string {
   const params = new URLSearchParams({
     client_id: googleClientId(),
@@ -71,9 +74,19 @@ export function authorizationUrl({
     access_type: "offline",
     include_granted_scopes: "true",
     state,
-    // Collegare un secondo account richiede di poter scegliere quale.
+    /*
+     * `select_account` è ciò che rende possibile il multi-account: senza,
+     * Google rimanda direttamente l'account già collegato e il secondo
+     * collegamento sovrascrive il primo invece di affiancarlo. Con
+     * `consent` da solo l'utente vede la schermata di consenso e conclude
+     * che «non funziona», perché ottiene di nuovo l'account che aveva già.
+     */
     prompt: addAnotherAccount ? "select_account consent" : "consent",
   });
+
+  // Per una riconnessione sappiamo *quale* account serve: dirlo a Google
+  // evita di far scegliere fra cinque indirizzi quello che era scaduto.
+  if (loginHint) params.set("login_hint", loginHint);
 
   return `${AUTH_ENDPOINT}?${params.toString()}`;
 }

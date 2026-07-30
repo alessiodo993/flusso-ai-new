@@ -37,7 +37,19 @@ export function GooglePanel() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <a className="btn btn-soft" href="/api/google/connect">
+        {/*
+          `aggiungi=1` non è un dettaglio: senza, Google rimanda l'account già
+          collegato invece di farne scegliere un altro, e il secondo
+          collegamento sembra semplicemente non funzionare.
+        */}
+        <a
+          className="btn btn-soft"
+          href={
+            accounts.length === 0
+              ? "/api/google/connect"
+              : "/api/google/connect?aggiungi=1"
+          }
+        >
           <Plus className="size-4" />
           {accounts.length === 0 ? "Collega Google" : "Aggiungi account"}
         </a>
@@ -71,8 +83,15 @@ export function GooglePanel() {
                 ? `L'accesso a ${needReconnect[0].email} è scaduto.`
                 : `${needReconnect.length} account vanno ricollegati.`}
             </p>
-            <a className="btn btn-soft mt-2 h-8 px-2.5 text-xs" href="/api/google/connect">
-              Riconnetti
+            {/* `email` diventa `login_hint`: Google si apre già sull'account
+                scaduto invece di farne scegliere uno fra cinque. */}
+            <a
+              className="btn btn-soft mt-2 h-8 px-2.5 text-xs"
+              href={`/api/google/connect?email=${encodeURIComponent(
+                needReconnect[0].email ?? "",
+              )}`}
+            >
+              Riconnetti {needReconnect.length === 1 ? needReconnect[0].email : ""}
             </a>
           </div>
         </div>
