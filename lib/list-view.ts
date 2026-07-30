@@ -87,12 +87,6 @@ export function buildListGroups({
     return asSingleGroup(visible.slice().sort(doneLast(byDeadline)));
   }
 
-  if (sort === "manuale") {
-    return asSingleGroup(
-      visible.slice().sort(doneLast((a, b) => a.sort_order - b.sort_order)),
-    );
-  }
-
   // Per progetto: i gruppi seguono l'ordine dei progetti, i task dentro
   // ciascun gruppo seguono la scadenza.
   const byProject = new Map<string, Task[]>();

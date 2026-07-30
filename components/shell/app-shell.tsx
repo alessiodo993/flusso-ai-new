@@ -13,6 +13,7 @@ import { SettingsSheet } from "@/components/settings/settings-sheet";
 import { FlussoDndProvider } from "@/components/dnd/flusso-dnd";
 import { CalibrationSheet } from "@/components/calibration/calibration-sheet";
 import { FocusOverlay } from "@/components/focus/focus-overlay";
+import { ProjectCreateDialog } from "@/components/projects/project-create-dialog";
 import { PostponeDialog } from "@/components/tasks/postpone-dialog";
 import { IdeasSection } from "@/components/ideas/ideas-section";
 import { ListSection } from "@/components/list/list-section";
@@ -179,6 +180,7 @@ export function AppShell() {
         <PlannerSheet />
         <FocusOverlay />
         <PostponeDialog />
+        <ProjectCreateDialog />
         <CalibrationSheet />
         <SettingsSheet />
         <KickoffSheet />

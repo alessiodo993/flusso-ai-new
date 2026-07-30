@@ -4,6 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
   CalendarDays,
+  FolderPlus,
   Lightbulb,
   ListChecks,
   Mic,
@@ -86,6 +87,13 @@ export function CommandPalette() {
           goto("idee");
           emit("flusso:quick-capture", {});
         },
+      },
+      {
+        id: "nuovo-progetto",
+        label: "Nuovo progetto",
+        hint: "Nome e colore, senza passare dalle Impostazioni",
+        Icon: FolderPlus,
+        run: () => emit("flusso:new-project", {}),
       },
       {
         id: "cattura-magica",

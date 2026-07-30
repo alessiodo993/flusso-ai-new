@@ -54,6 +54,12 @@ type EventMap = {
   };
   "flusso:open-palette": Record<string, never>;
   "flusso:open-planner": Record<string, never>;
+  /**
+   * Crea un progetto senza passare dalle Impostazioni. Con `assignToTaskId` il
+   * task ci finisce dentro appena il progetto esiste: chi apre da un task sta
+   * archiviando quel task, non configurando l'app.
+   */
+  "flusso:new-project": { assignToTaskId?: string };
   /** «Rimanda 15 min» dalla notifica di inizio blocco. */
   "flusso:snooze": { taskId: string; minutes: number };
   "flusso:open-kickoff": Record<string, never>;

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, ListChecks, SearchX } from "lucide-react";
+import { ChevronRight, FolderPlus, ListChecks, SearchX } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CaptureBar } from "@/components/shared/capture-bar";
@@ -19,7 +19,7 @@ import { TaskSheet } from "@/components/list/task-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionStatus } from "@/components/ui/section-status";
 import { safeColor } from "@/lib/colors";
-import type { ListFilter } from "@/lib/events";
+import { emit, type ListFilter } from "@/lib/events";
 import { useProjects } from "@/lib/hooks/use-projects";
 import { useTaskQuickActions } from "@/lib/hooks/use-task-quick-actions";
 import {
@@ -293,6 +293,23 @@ export function ListSection({
           onClick={showMore}
         >
           Mostra altri {next} · {hidden} nascosti
+        </button>
+      )}
+
+      {/*
+        Il posto in cui viene in mente che serve un progetto nuovo è qui: sotto
+        i gruppi, guardando quanti task stanno in «Senza progetto». Compare solo
+        raggruppando per progetto, che è la vista in cui i progetti si vedono —
+        ordinando per scadenza sarebbe un comando fuori contesto.
+      */}
+      {sort === "progetto" && visibleCount > 0 && (
+        <button
+          type="button"
+          className="btn btn-ghost w-full justify-start rounded-none border-t border-line text-ink-soft"
+          onClick={() => emit("flusso:new-project", {})}
+        >
+          <FolderPlus className="size-4" />
+          Nuovo progetto
         </button>
       )}
 

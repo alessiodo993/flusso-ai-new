@@ -32,9 +32,9 @@ export function DemoData({ children }: { children: React.ReactNode }) {
     const today = todayISO();
 
     const projects: Project[] = [
-      row("p1", { name: "Tesi", color: "#3f6b4f", sort_order: 1 }),
-      row("p2", { name: "Flusso", color: "#5b7c99", sort_order: 2 }),
-      row("p3", { name: "Casa", color: "#a4713f", sort_order: 3 }),
+      row("p1", { name: "Tesi", color: "#39724e", sort_order: 1 }),
+      row("p2", { name: "Flusso", color: "#4c7599", sort_order: 2 }),
+      row("p3", { name: "Casa", color: "#9e632a", sort_order: 3 }),
     ].map((project) => ({
       deadline: null,
       archived: false,

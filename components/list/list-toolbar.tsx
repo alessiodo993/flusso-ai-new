@@ -7,13 +7,20 @@ import { useProjects } from "@/lib/hooks/use-projects";
 import { ENERGIES, ENERGY_LABEL, type Energy } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export const SORTS = ["progetto", "scadenza", "manuale"] as const;
+/*
+ * «Manuale» è stato rimosso, e non era una preferenza: era una promessa che
+ * l'app non manteneva. Ordinava per `sort_order`, che sui task viene scritto
+ * una volta alla creazione e non è mai stato modificabile — non c'è riordino a
+ * trascinamento nella Lista, la maniglia serve a portare un task sul
+ * calendario. Quindi «Manuale» significava «ordine di creazione» sotto un nome
+ * che invitava a cercare un comando inesistente.
+ */
+export const SORTS = ["progetto", "scadenza"] as const;
 export type ListSort = (typeof SORTS)[number];
 
 const SORT_LABEL: Record<ListSort, string> = {
   progetto: "Progetto",
   scadenza: "Scadenza",
-  manuale: "Manuale",
 };
 
 export type ListFilters = {

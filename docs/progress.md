@@ -288,8 +288,18 @@ colonne, la BottomNav e il FAB sono stati controllati così. La pagina
 
 **Lista**
 - Ordinamenti **Progetto** (default, gruppi collassabili ordinati per
-  scadenza), **Scadenza**, **Manuale**; filtri per progetto, energia e
-  «in scadenza», che è anche ciò che apre il badge dell'header.
+  scadenza) e **Scadenza**; filtri per progetto, energia e «in scadenza», che
+  è anche ciò che apre il badge dell'header.
+- «Manuale» è stato rimosso: ordinava per `sort_order`, che sui task viene
+  scritto una volta alla creazione e che nessuna interfaccia ha mai permesso
+  di cambiare — non c'è riordino a trascinamento nella Lista, la maniglia
+  porta un task sul calendario. Era «ordine di creazione» sotto un nome che
+  invitava a cercare un comando inesistente. Il `sort_order` resta come
+  spareggio fra due task che scadono lo stesso giorno.
+- **Nuovo progetto** si crea da tre punti oltre alle Impostazioni: il fondo
+  della Lista raggruppata per progetto, la palette dei comandi, e il Task
+  Sheet — che lo assegna al task aperto appena esiste. Il colore proposto è
+  il primo libero della tavolozza, non un default fisso.
 - `TaskCard` mostra tutto senza aprire nulla: barra del colore del progetto,
   titolo, chip, stella dell'highlight, pulsante di pianificazione, checkbox,
   cestino.

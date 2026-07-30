@@ -33,6 +33,20 @@ const SCREENS = [
     },
   },
   {
+    name: "nuovo-progetto",
+    path: "/anteprima",
+    // Dal fondo della Lista e non dalla palette: il pulsante della Lista ha lo
+    // stesso testo della voce di palette, e con la palette aperta finisce
+    // dietro al suo overlay.
+    open: async (page) => {
+      await page
+        .getByRole("button", { name: "Nuovo progetto", exact: true })
+        .first()
+        .click();
+      await page.waitForTimeout(400);
+    },
+  },
+  {
     name: "pianifica",
     path: "/anteprima",
     open: async (page) => {

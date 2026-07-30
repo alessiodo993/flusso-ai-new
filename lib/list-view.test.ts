@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { NO_FILTERS } from "@/components/list/list-toolbar";
+import { NO_FILTERS, SORTS } from "@/components/list/list-toolbar";
 import { buildListGroups, countVisible, isListable } from "./list-view";
 import type { Project, Task } from "./types";
 
@@ -126,25 +126,29 @@ describe("ordinamento per scadenza", () => {
   });
 });
 
-describe("ordinamento manuale", () => {
-  it("rispetta il sort_order", () => {
+describe("gli ordinamenti disponibili", () => {
+  it("**sono due, e «manuale» non esiste più**", () => {
+    // Ordinava per `sort_order`, che sui task nessuna interfaccia ha mai
+    // permesso di cambiare: era «ordine di creazione» sotto un nome che
+    // invitava a cercare un comando inesistente.
+    expect([...SORTS]).toEqual(["progetto", "scadenza"]);
+  });
+
+  it("il sort_order resta lo spareggio a pari scadenza", () => {
+    // Non è più un ordinamento a sé, ma serve ancora a rendere l'ordine
+    // stabile fra due task che scadono lo stesso giorno.
     const groups = buildListGroups({
       tasks: [
-        task({ id: "terzo", sort_order: 300 }),
-        task({ id: "primo", sort_order: 100 }),
-        task({ id: "secondo", sort_order: 200 }),
+        task({ id: "dopo", deadline: TODAY, sort_order: 300 }),
+        task({ id: "prima", deadline: TODAY, sort_order: 100 }),
       ],
       projects: PROJECTS,
-      sort: "manuale",
+      sort: "scadenza",
       filters: NO_FILTERS,
       today: TODAY,
     });
 
-    expect(groups[0].tasks.map((t) => t.id)).toEqual([
-      "primo",
-      "secondo",
-      "terzo",
-    ]);
+    expect(groups[0].tasks.map((t) => t.id)).toEqual(["prima", "dopo"]);
   });
 });
 

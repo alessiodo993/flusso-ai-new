@@ -3,6 +3,7 @@
 import {
   CalendarClock,
   Check,
+  FolderPlus,
   ListChecks,
   Play,
   Star,
@@ -15,6 +16,7 @@ import { SubtaskList } from "@/components/list/subtask-list";
 import { TaskHistory } from "@/components/list/task-history";
 import { ResponsiveSheet } from "@/components/shell/responsive-sheet";
 import { SelectField } from "@/components/ui/select-field";
+import { emit } from "@/lib/events";
 import { useProjects } from "@/lib/hooks/use-projects";
 import { useTaskQuickActions } from "@/lib/hooks/use-task-quick-actions";
 import { useUpdateTask } from "@/lib/hooks/use-tasks";
@@ -216,18 +218,40 @@ export function TaskSheet({
 
         <div className="grid gap-2 sm:grid-cols-2">
           <Labelled label="Progetto">
-            <SelectField
-              ariaLabel="Progetto"
-              placeholder="Nessun progetto"
-              value={task.project_id ?? ""}
-              onChange={(value) =>
-                patch({ id: task.id, project_id: value || null })
-              }
-              options={projects.map((project) => ({
-                value: project.id,
-                label: project.name,
-              }))}
-            />
+            <div className="flex items-center gap-1.5">
+              <SelectField
+                className="min-w-0 flex-1"
+                ariaLabel="Progetto"
+                placeholder="Nessun progetto"
+                value={task.project_id ?? ""}
+                onChange={(value) =>
+                  patch({ id: task.id, project_id: value || null })
+                }
+                options={projects.map((project) => ({
+                  value: project.id,
+                  label: project.name,
+                }))}
+              />
+
+              {/*
+                Il momento in cui ci si accorge che serve un progetto nuovo è
+                questo: si sta archiviando un task e nessuno di quelli esistenti
+                gli somiglia. Mandare l'utente nelle Impostazioni e farlo tornare
+                indietro significa che il progetto non lo crea, e il task resta
+                in «Senza progetto» per sempre.
+              */}
+              <button
+                type="button"
+                className="icon-btn size-10 shrink-0 border border-line"
+                aria-label="Nuovo progetto per questo task"
+                title="Nuovo progetto"
+                onClick={() =>
+                  emit("flusso:new-project", { assignToTaskId: task.id })
+                }
+              >
+                <FolderPlus className="size-[18px]" />
+              </button>
+            </div>
           </Labelled>
 
           <Labelled label="Energia">

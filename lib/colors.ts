@@ -34,6 +34,52 @@ export const PROJECT_COLORS = [
 export const DEFAULT_PROJECT_COLOR = PROJECT_COLORS[0];
 
 /**
+ * Il primo colore della tavolozza che nessun progetto sta già usando.
+ *
+ * Serve perché il default fisso era il primo della lista: due progetti creati
+ * di fila nascevano **dello stesso verde**, e il colore — che sul calendario è
+ * l'unico modo di riconoscere a chi appartiene un blocco — non distingueva
+ * niente finché non lo si cambiava a mano. Chi crea un progetto pensa al nome,
+ * non alla tinta.
+ *
+ * Esaurita la tavolozza si riparte dal principio: otto progetti attivi con
+ * otto colori diversi sono già più di quanti si distinguano a colpo d'occhio,
+ * e a quel punto ripetere è meno peggio che inventare una tinta fuori sistema.
+ */
+export function nextDistinctColor(
+  used: Array<string | null | undefined>,
+): string {
+  /*
+   * Si contano le occorrenze, non si raccolgono in un insieme: un `Set`
+   * perde i doppioni, e senza doppioni «il meno usato» è indistinguibile da
+   * «usato una volta». Con la tavolozza esaurita la funzione ricadeva sempre
+   * sul primo colore, cioè proprio sul difetto che deve evitare.
+   */
+  const counts = new Map<string, number>(
+    PROJECT_COLORS.map((color) => [color, 0]),
+  );
+
+  for (const value of used) {
+    if (typeof value !== "string" || !HEX.test(value.trim())) continue;
+    const color = safeColor(value);
+    if (counts.has(color)) counts.set(color, (counts.get(color) ?? 0) + 1);
+  }
+
+  // Il primo con zero occorrenze; se non ce n'è, il meno usato in assoluto.
+  let best = PROJECT_COLORS[0] as string;
+  let bestCount = Number.POSITIVE_INFINITY;
+  for (const color of PROJECT_COLORS) {
+    const count = counts.get(color) ?? 0;
+    if (count === 0) return color;
+    if (count < bestCount) {
+      bestCount = count;
+      best = color;
+    }
+  }
+  return best;
+}
+
+/**
  * Il colore di ripiego per un calendario Google senza colore proprio.
  *
  * **Non** è il verde di Flusso, ed è la differenza che conta: con il default

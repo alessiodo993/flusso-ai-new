@@ -8,6 +8,7 @@ import {
   EXTERNAL_COLOR,
   eventSurface,
   fromGoogleColorId,
+  nextDistinctColor,
   PROJECT_COLORS,
   readableInk,
   safeCalendarColor,
@@ -68,6 +69,49 @@ describe("la palette", () => {
 
   it("non ha doppioni", () => {
     expect(new Set(PROJECT_COLORS).size).toBe(PROJECT_COLORS.length);
+  });
+});
+
+describe("nextDistinctColor", () => {
+  it("dà il primo colore libero della tavolozza", () => {
+    expect(nextDistinctColor([])).toBe(PROJECT_COLORS[0]);
+    expect(nextDistinctColor([PROJECT_COLORS[0]])).toBe(PROJECT_COLORS[1]);
+    expect(nextDistinctColor([PROJECT_COLORS[1], PROJECT_COLORS[0]])).toBe(
+      PROJECT_COLORS[2],
+    );
+  });
+
+  it("**due progetti di fila non nascono dello stesso colore**", () => {
+    // È il difetto che questa funzione esiste per impedire: il default era
+    // fisso sul primo della lista, e sul calendario il colore è l'unico modo
+    // di riconoscere a chi appartiene un blocco.
+    const primo = nextDistinctColor([]);
+    const secondo = nextDistinctColor([primo]);
+    expect(secondo).not.toBe(primo);
+  });
+
+  it("ignora i valori non validi invece di sprecare un colore", () => {
+    expect(nextDistinctColor([null, undefined, "verde", ""])).toBe(
+      PROJECT_COLORS[0],
+    );
+  });
+
+  it("riconosce lo stesso colore scritto in modo diverso", () => {
+    expect(nextDistinctColor([PROJECT_COLORS[0].toUpperCase()])).toBe(
+      PROJECT_COLORS[1],
+    );
+  });
+
+  it("esaurita la tavolozza riparte, senza inventare tinte", () => {
+    const tutti = [...PROJECT_COLORS];
+    const scelto = nextDistinctColor(tutti);
+    expect(PROJECT_COLORS).toContain(scelto);
+  });
+
+  it("con la tavolozza esaurita sceglie il meno usato", () => {
+    // Tutti presi una volta, il primo due: il ciclo riprende dal secondo.
+    const scelto = nextDistinctColor([...PROJECT_COLORS, PROJECT_COLORS[0]]);
+    expect(scelto).not.toBe(PROJECT_COLORS[0]);
   });
 });
 

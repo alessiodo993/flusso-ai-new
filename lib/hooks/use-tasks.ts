@@ -10,7 +10,6 @@ import {
   replaceById,
   useOptimisticMutation,
 } from "@/lib/hooks/use-optimistic";
-import { orderBetween } from "@/lib/sort-order";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import type { Inserts } from "@/lib/supabase/database.types";
 import { addDaysISO, todayISO, type DayISO } from "@/lib/time";
@@ -443,30 +442,6 @@ export function usePostponeTask() {
         start_minute: day ? (startMinute ?? null) : null,
         postpone_count: task.postpone_count + 1,
         last_postponed_at: new Date().toISOString(),
-      }));
-    },
-  });
-}
-
-export function useReorderTask() {
-  return useOptimisticMutation<
-    { id: string; before: number | null; after: number | null },
-    void,
-    Task[]
-  >({
-    key: qk.tasks,
-    errorMessage: "Non è stato possibile riordinare.",
-    async mutationFn({ id, before, after }) {
-      const { error } = await supabaseBrowser()
-        .from("tasks")
-        .update({ sort_order: orderBetween(before, after) })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    optimistic(current, { id, before, after }) {
-      return replaceById(current, id, (task) => ({
-        ...task,
-        sort_order: orderBetween(before, after),
       }));
     },
   });

@@ -3,7 +3,8 @@
 import { Archive, ArchiveRestore, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { PROJECT_COLORS, safeColor } from "@/lib/colors";
+import { ColorPicker } from "@/components/projects/color-picker";
+import { nextDistinctColor, safeColor } from "@/lib/colors";
 import {
   useCreateProject,
   useDeleteProject,
@@ -29,14 +30,25 @@ export function ProjectsPanel() {
   const update = useUpdateProject();
   const remove = useDeleteProject();
 
+  const active = projects.filter((project) => !project.archived);
+  const proposto = nextDistinctColor(active.map((project) => project.color));
+
   const [name, setName] = useState("");
-  const [color, setColor] = useState<string>(PROJECT_COLORS[0]);
+  /*
+   * `null` = «quello proposto». Tenere qui un colore fisso significava che dopo
+   * la prima creazione il campo restava sul colore appena usato, e il progetto
+   * successivo nasceva identico al precedente. Finché non si sceglie a mano, il
+   * valore segue il primo colore libero.
+   */
+  const [scelto, setScelto] = useState<string | null>(null);
+  const color = scelto ?? proposto;
 
   function add() {
     const trimmed = name.trim();
     if (!trimmed) return;
     create.mutate({ name: trimmed, color });
     setName("");
+    setScelto(null);
   }
 
   return (
@@ -66,7 +78,11 @@ export function ProjectsPanel() {
         </button>
       </div>
 
-      <ColorPicker value={color} onChange={setColor} label="Colore del nuovo progetto" />
+      <ColorPicker
+        value={color}
+        onChange={setScelto}
+        label="Colore del nuovo progetto"
+      />
 
       <ul className="space-y-1.5">
         {projects.map((project) => (
@@ -201,36 +217,5 @@ function ProjectRow({
         </div>
       )}
     </li>
-  );
-}
-
-function ColorPicker({
-  value,
-  label,
-  onChange,
-}: {
-  value: string;
-  label: string;
-  onChange: (color: string) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
-      {PROJECT_COLORS.map((color) => (
-        <button
-          key={color}
-          type="button"
-          aria-label={color}
-          aria-pressed={safeColor(value) === color}
-          onClick={() => onChange(color)}
-          className={cn(
-            "size-7 rounded-full border-2 transition-transform duration-150",
-            safeColor(value) === color
-              ? "border-ink scale-110"
-              : "border-transparent",
-          )}
-          style={{ background: color }}
-        />
-      ))}
-    </div>
   );
 }
