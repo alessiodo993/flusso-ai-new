@@ -8,7 +8,12 @@ import { qk } from "@/lib/hooks/query-keys";
 import { replaceById, useOptimisticMutation } from "@/lib/hooks/use-optimistic";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { addDaysISO, todayISO, type DayISO } from "@/lib/time";
-import type { GoogleAccount, GoogleCalendar, GoogleEvent } from "@/lib/types";
+import type {
+  GoogleAccount,
+  GoogleCalendar,
+  GoogleConfigReport,
+  GoogleEvent,
+} from "@/lib/types";
 
 /** La stessa finestra della sincronizzazione: un mese indietro, tre avanti. */
 const PAST_DAYS = 30;
@@ -173,6 +178,59 @@ export function useToggleGoogleEventDone() {
         ...event,
         local_done: done,
       }));
+    },
+  });
+}
+
+/**
+ * La configurazione OAuth vista dal server.
+ *
+ * Non serve a far funzionare il collegamento: serve a **saperlo prima**. Senza,
+ * l'unica diagnosi disponibile è la pagina di Google — «Errore 401:
+ * invalid_client», in inglese, senza dire quale valore guardare.
+ */
+export function useGoogleConfig() {
+  const query = useQuery({
+    queryKey: qk.googleConfig,
+    queryFn: async (): Promise<GoogleConfigReport> => {
+      const response = await fetch("/api/google/config");
+      if (!response.ok) throw new Error("Configurazione non leggibile.");
+      return response.json();
+    },
+    staleTime: 60_000,
+  });
+
+  return { ...query, config: query.data };
+}
+
+/**
+ * Chiede a Google se queste credenziali esistono. È l'unico controllo che
+ * distingue «valore sbagliato» da «client cancellato», e nessuno dei due si
+ * vede guardando la variabile d'ambiente.
+ */
+export function useVerifyGoogleConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<GoogleConfigReport> => {
+      const response = await fetch("/api/google/config?verifica=1");
+      if (!response.ok) throw new Error("Verifica non riuscita.");
+      return response.json();
+    },
+    onSuccess(config) {
+      queryClient.setQueryData(qk.googleConfig, config);
+      if (config.verifica?.ok) toast.success(config.verifica.message);
+      else if (config.verifica) {
+        toast.error(config.verifica.message, {
+          duration: Infinity,
+          closeButton: true,
+        });
+      }
+    },
+    onError(error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Verifica non riuscita.",
+      );
     },
   });
 }

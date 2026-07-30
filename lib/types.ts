@@ -265,3 +265,23 @@ export function leastAdvancedKeyResult(okr: Okr): KeyResult | null {
 export function keyResultStep(kr: KeyResult): number {
   return Math.max(1, Math.round(kr.target / 20));
 }
+
+/**
+ * La diagnostica OAuth, come la manda `/api/google/config`.
+ *
+ * Sta qui e non nel modulo server perché la leggono entrambe le estremità: se
+ * il tipo vivesse solo da una parte, l'altra ne terrebbe una copia e le due
+ * divergerebbero senza che niente se ne accorga.
+ */
+export type GoogleConfigReport = {
+  /** Intero: il client ID viaggia in chiaro nell'URL di consenso, non è un segreto. */
+  clientId: string | null;
+  /** Mascherato: qui basta sapere se c'è. */
+  clientSecret: string | null;
+  redirectUri: string;
+  appUrl: string;
+  appUrlConfigurato: boolean;
+  problemi: string[];
+  /** Presente solo dopo una verifica esplicita: interroga Google. */
+  verifica: { ok: boolean; message: string } | null;
+};

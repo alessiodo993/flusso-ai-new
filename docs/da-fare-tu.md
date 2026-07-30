@@ -374,7 +374,35 @@ account Google vanno ricollegati.
 | `GOOGLE_CLIENT_SECRET` | dal passo 5.1 |
 | `GOOGLE_TOKEN_SECRET` | la stringa casuale del passo 5.2 |
 
+Quando incolli, **incolla solo il valore**: niente virgolette, niente
+`GOOGLE_CLIENT_ID=` davanti, e attenzione a non prendere una riga vuota in
+fondo. Un solo a capo di troppo basta a far dire a Google che il client non
+esiste — e nel pannello di Vercel il valore continua a *sembrare* giusto.
+(Flusso ora questi tre casi li ripulisce e te li segnala lo stesso.)
+
 Poi **Deployments → `⋯` → Redeploy**.
+
+## Passo 5.4 — Verifica prima di collegare
+
+Apri **Impostazioni → Google → Configurazione OAuth**. Vedi i valori che
+Flusso sta usando davvero: Client ID per intero (non è un segreto: viaggia
+in chiaro quando ti manda da Google), secret mascherato, e l'indirizzo di
+ritorno da registrare.
+
+Premi **«Verifica le credenziali con Google»**. Flusso chiede a Google se
+quelle credenziali esistono, senza farti fare il giro dell'autorizzazione, e
+risponde una di tre cose:
+
+- **«Tutto a posto»** → credenziali e indirizzo di ritorno vanno bene. Se il
+  collegamento fallisce lo stesso, manca la tua email fra i *Test users*.
+- **«Google non conosce questo client ID»** → il valore su Vercel non è quello
+  giusto, oppure il client OAuth non esiste più. Torna al passo 5.1 e
+  confronta carattere per carattere.
+- **«l'indirizzo di ritorno non è registrato»** → il messaggio contiene
+  l'indirizzo esatto da incollare in *Authorized redirect URIs*.
+
+È la stessa domanda che il collegamento fa a Google, fatta prima: se qui è
+verde, il problema non è nelle credenziali.
 
 ---
 
@@ -456,6 +484,7 @@ secondi: quello è normale.
 |---|---|---|
 | Il link della mail porta su `localhost` | manca il *Site URL* | Parte 4 |
 | «Accesso bloccato» / «access_denied» collegando Google | la tua email non è fra i *Test users* | Parte 5.1, punto 3 |
+| **«Errore 401: invalid_client — The OAuth client was not found»** | il `GOOGLE_CLIENT_ID` su Vercel non corrisponde a nessun client OAuth: valore sbagliato, incollato con virgolette o con un a capo, oppure client cancellato | Passo 5.4: premi *Verifica le credenziali*, poi confronta col Client ID in Google Cloud |
 | Il secondo account sostituisce il primo | era un difetto nostro, corretto: «Aggiungi account» ora fa scegliere l'account | ripubblica e riprova |
 | «redirect_uri_mismatch» | l'URI in Google Cloud non combacia | dev'essere esattamente `https://tuo-indirizzo/api/google/callback` |
 | L'app si apre ma è vuota e non salva niente | `NEXT_PUBLIC_SUPABASE_ANON_KEY` sbagliata o assente | Parte 3.3, poi Redeploy |

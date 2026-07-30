@@ -17,6 +17,7 @@ export const qk = {
   calibration: ["calibration"] as const,
   reviews: (day: DayISO) => ["reviews", day] as const,
   googleAccounts: ["google", "accounts"] as const,
+  googleConfig: ["google", "config"] as const,
   googleCalendars: ["google", "calendars"] as const,
   googleEvents: (from: DayISO, to: DayISO) =>
     ["google", "events", from, to] as const,

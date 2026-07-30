@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
 
+import { GoogleConfigError } from "@/lib/google/credentials";
 import { authorizationUrl } from "@/lib/google/oauth";
 import { GOOGLE_STATE_COOKIE } from "@/lib/google/state-cookie";
 import { currentUser, supabaseServer } from "@/lib/supabase/server";
@@ -67,6 +68,10 @@ export async function GET(request: NextRequest) {
 }
 
 function explain(error: unknown, origin: string): string {
+  // Un `GoogleConfigError` è già scritto per chi lo leggerà: dice quale
+  // variabile guardare e cosa farne. Riscriverlo qui lo peggiorerebbe.
+  if (error instanceof GoogleConfigError) return error.message;
+
   const message = error instanceof Error ? error.message : String(error);
 
   for (const name of [

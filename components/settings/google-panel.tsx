@@ -1,6 +1,12 @@
 "use client";
 
-import { Loader2, Plus, RefreshCw, TriangleAlert } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
+  TriangleAlert,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -9,8 +15,10 @@ import { PROJECT_COLORS, safeColor } from "@/lib/colors";
 import {
   useGoogleAccounts,
   useGoogleCalendars,
+  useGoogleConfig,
   useGoogleSync,
   useUpdateGoogleCalendar,
+  useVerifyGoogleConfig,
 } from "@/lib/hooks/use-google";
 import { useSettings, useUpdateSettings } from "@/lib/hooks/use-settings";
 import { cn } from "@/lib/utils";
@@ -30,6 +38,8 @@ export function GooglePanel() {
   const { settings } = useSettings();
   const updateSettings = useUpdateSettings();
   const sync = useGoogleSync();
+  const { config } = useGoogleConfig();
+  const verify = useVerifyGoogleConfig();
 
   const [confirming, setConfirming] = useState(false);
   const writeTarget = calendars.find((one) => one.is_write_target);
@@ -70,6 +80,30 @@ export function GooglePanel() {
           </button>
         )}
       </div>
+
+      {/*
+        I problemi di configurazione si mostrano **prima** del collegamento.
+        Altrimenti l'unica diagnosi disponibile è la pagina di Google — «Errore
+        401: invalid_client» — che non dice quale variabile guardare.
+      */}
+      {config && config.problemi.length > 0 && (
+        <div
+          role="alert"
+          className="flex items-start gap-2.5 rounded-flusso-md border border-danger/30 bg-danger-soft p-3"
+        >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-danger" />
+          <div className="min-w-0 flex-1 space-y-1 text-sm">
+            <p className="font-medium">
+              Il collegamento fallirà: manca qualcosa nella configurazione.
+            </p>
+            <ul className="list-disc space-y-1 pl-4 text-ink-soft">
+              {config.problemi.map((problem) => (
+                <li key={problem}>{problem}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {needReconnect.length > 0 && (
         <div
@@ -264,6 +298,79 @@ export function GooglePanel() {
           </div>
         </>
       )}
+
+      {config && (
+        <details className="hairline pt-3 text-sm">
+          <summary className="flex min-h-11 cursor-pointer items-center text-ink-soft">
+            Configurazione OAuth
+          </summary>
+
+          <div className="mt-2 space-y-2">
+            <p className="text-ink-soft">
+              Questi sono i valori che Flusso sta usando davvero. Devono
+              coincidere con quelli in Google Cloud → APIs &amp; Services →
+              Credentials.
+            </p>
+
+            {/* Il client ID **non è un segreto**: viaggia in chiaro nell'URL di
+                consenso. Mostrarlo a metà renderebbe impossibile l'unica cosa
+                per cui serve, cioè confrontarlo. */}
+            <dl className="space-y-1.5">
+              <Row label="Client ID" value={config.clientId ?? "— assente —"} />
+              <Row
+                label="Client secret"
+                value={config.clientSecret ?? "— assente —"}
+              />
+              <Row label="Redirect URI" value={config.redirectUri} />
+              <Row
+                label="APP_URL"
+                value={
+                  config.appUrlConfigurato
+                    ? config.appUrl
+                    : `${config.appUrl} (dedotto, non impostato)`
+                }
+              />
+            </dl>
+
+            <button
+              type="button"
+              className="btn btn-soft h-11"
+              onClick={() => verify.mutate()}
+              disabled={verify.isPending}
+            >
+              {verify.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ShieldCheck className="size-4" />
+              )}
+              Verifica le credenziali con Google
+            </button>
+
+            {config.verifica && (
+              <p
+                className={cn(
+                  "rounded-flusso-md p-2.5",
+                  config.verifica.ok
+                    ? "bg-accent-soft text-ink"
+                    : "bg-danger-soft text-ink",
+                )}
+              >
+                {config.verifica.message}
+              </p>
+            )}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+/** Una riga della diagnostica: etichetta corta, valore selezionabile. */
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-ink-faint">{label}</dt>
+      <dd className="break-all font-mono text-xs">{value}</dd>
     </div>
   );
 }

@@ -46,7 +46,9 @@ export function supabaseServiceRoleKey(): string {
 /** URL pubblico dell'app, usato per i redirect OAuth e i link nelle email. */
 export function appUrl(): string {
   const explicit = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL;
-  if (explicit) return explicit.replace(/\/$/, "");
+  // Lo spazio e l'a capo che l'incolla si porta dietro finirebbero dentro il
+  // `redirect_uri`, che Google confronta carattere per carattere.
+  if (explicit?.trim()) return explicit.trim().replace(/\/$/, "");
   // Vercel espone il dominio della deployment corrente per le preview.
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";

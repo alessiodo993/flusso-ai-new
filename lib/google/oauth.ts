@@ -1,6 +1,16 @@
 import "server-only";
 
-import { appUrl } from "@/lib/env";
+import {
+  googleClientId,
+  googleClientSecret,
+  redirectUri,
+  TOKEN_ENDPOINT,
+} from "@/lib/google/credentials";
+
+// Chi fa OAuth cerca il redirect qui, non in `credentials`: là sta soltanto
+// perché la verifica delle credenziali ne ha bisogno e importarlo al contrario
+// creerebbe un ciclo.
+export { redirectUri };
 
 /**
  * OAuth 2.0 verso Google, lato server e basta. Nessun token, nessun secret e
@@ -8,7 +18,6 @@ import { appUrl } from "@/lib/env";
  */
 
 const AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
-const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v3/userinfo";
 
 /** Lettura **e** scrittura: serve alla sincronizzazione in uscita. */
@@ -26,25 +35,6 @@ export const SCOPE_READ_ONLY = [
   "profile",
   "https://www.googleapis.com/auth/calendar.readonly",
 ].join(" ");
-
-export function googleClientId(): string {
-  const value = process.env.GOOGLE_CLIENT_ID;
-  if (!value) throw new Error("Variabile d'ambiente mancante: GOOGLE_CLIENT_ID.");
-  return value;
-}
-
-function googleClientSecret(): string {
-  const value = process.env.GOOGLE_CLIENT_SECRET;
-  if (!value) {
-    throw new Error("Variabile d'ambiente mancante: GOOGLE_CLIENT_SECRET.");
-  }
-  return value;
-}
-
-/** L'unico redirect da registrare in Google Cloud. */
-export function redirectUri(): string {
-  return `${appUrl()}/api/google/callback`;
-}
 
 /**
  * L'indirizzo a cui mandare l'utente per il consenso.

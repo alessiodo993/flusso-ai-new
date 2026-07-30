@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { GOOGLE_STATE_COOKIE } from "@/lib/google/state-cookie";
 import { canWriteTo, listCalendars } from "@/lib/google/api";
+import { GoogleConfigError } from "@/lib/google/credentials";
 import { upsertAccount } from "@/lib/google/accounts";
 import { exchangeCode, fetchUserEmail } from "@/lib/google/oauth";
 import { fromGoogleColorId } from "@/lib/colors";
@@ -120,6 +121,8 @@ function googleError(code: string, origin: string): string {
 }
 
 function explain(error: unknown, origin: string): string {
+  if (error instanceof GoogleConfigError) return error.message;
+
   const message = error instanceof Error ? error.message : String(error);
 
   if (message.includes("redirect_uri_mismatch")) {
