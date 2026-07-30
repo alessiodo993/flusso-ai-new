@@ -51,8 +51,8 @@ export function BottomNav({
               "transition-transform duration-150 ease-out active:scale-95",
             )}
           >
-            <Play className="size-5 fill-current" />
-            <span className="text-[10px] font-medium leading-none">Adesso</span>
+            <Play className="size-6 fill-current" />
+            <span className="text-[11px] font-medium leading-none">Adesso</span>
           </button>
         </div>
 
@@ -89,11 +89,11 @@ function NavButton({
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-flusso-sm py-2",
-        "text-[11px] font-medium transition-colors duration-150 ease-out",
+        "text-xs font-medium transition-colors duration-150 ease-out",
         active ? "text-accent" : "text-ink-faint",
       )}
     >
-      <Icon className={cn("size-5", active && "stroke-[2.25]")} />
+      <Icon className={cn("size-6", active && "stroke-[2.25]")} />
       {label}
     </button>
   );

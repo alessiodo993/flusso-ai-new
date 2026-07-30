@@ -84,7 +84,7 @@ export function ListToolbar({
         <SelectField
           ariaLabel="Filtra per progetto"
           placeholder="Tutti i progetti"
-          className="w-36"
+          className="w-40"
           value={filters.projectId ?? ""}
           onChange={(value) =>
             onFiltersChange({ ...filters, projectId: value || null })
@@ -98,7 +98,7 @@ export function ListToolbar({
         <SelectField
           ariaLabel="Filtra per energia"
           placeholder="Ogni energia"
-          className="w-32"
+          className="w-36"
           value={filters.energy ?? ""}
           onChange={(value) =>
             onFiltersChange({ ...filters, energy: (value || null) as Energy | null })

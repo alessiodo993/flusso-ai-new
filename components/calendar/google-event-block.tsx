@@ -54,7 +54,7 @@ export const GoogleEventBlock = memo(function GoogleEventBlock({
     >
       <p
         className={cn(
-          "truncate text-[12px] font-medium leading-tight",
+          "truncate text-[13px] font-medium leading-tight",
           event.local_done ? "text-ink-soft line-through" : "text-ink",
         )}
       >
@@ -62,7 +62,7 @@ export const GoogleEventBlock = memo(function GoogleEventBlock({
       </p>
 
       {height > 38 && (
-        <p className="tnum mt-0.5 text-[11px] text-ink-soft">
+        <p className="tnum mt-0.5 text-xs text-ink-soft">
           {fmtMin(event.start_minute)}–{fmtMin(event.end_minute)}
         </p>
       )}

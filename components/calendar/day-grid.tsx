@@ -140,7 +140,7 @@ export function DayGrid({
           <div
             key={minute}
             style={{ top: (minute - view.start) * px }}
-            className="tnum absolute -translate-y-1/2 pl-2 text-[11px] text-ink-faint"
+            className="tnum absolute -translate-y-1/2 pl-2 text-xs text-ink-faint"
           >
             {fmtMin(minute)}
           </div>
@@ -218,7 +218,7 @@ export function DayGrid({
             }}
             className="absolute inset-x-0 flex items-start rounded-flusso-sm border border-dashed border-line-strong bg-sunken px-2 py-1"
           >
-            <span className="truncate text-[11px] text-ink-soft">
+            <span className="truncate text-xs text-ink-soft">
               {block.label ?? block.type}
             </span>
           </div>

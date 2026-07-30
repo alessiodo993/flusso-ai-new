@@ -55,7 +55,7 @@ export function ProgressRing({
         />
       </svg>
 
-      <span className="tnum absolute inset-0 flex items-center justify-center text-[11px] font-medium">
+      <span className="tnum absolute inset-0 flex items-center justify-center text-xs font-medium">
         {Math.round(clamped * 100)}
       </span>
     </div>

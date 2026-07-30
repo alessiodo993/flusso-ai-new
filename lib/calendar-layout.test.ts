@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   bufferStrips,
   layoutOverlaps,
+  HOUR_HEIGHT,
   pxPerMinute,
   visibleWindow,
 } from "./calendar-layout";
@@ -214,6 +215,9 @@ describe("pxPerMinute", () => {
   });
 
   it("un blocco da un'ora è alto quanto un'ora di griglia", () => {
-    expect(pxPerMinute(30) * 60).toBe(112);
+    // Il numero esatto è una scelta di design e cambia; il vincolo che conta è
+    // che le due misure coincidano, altrimenti i blocchi scivolano rispetto
+    // alle righe delle ore.
+    expect(pxPerMinute(30) * 60).toBe(HOUR_HEIGHT[30]);
   });
 });

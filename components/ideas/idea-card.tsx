@@ -99,7 +99,7 @@ export const IdeaCard = memo(function IdeaCard({
           <input
             autoFocus
             defaultValue={idea.title}
-            className="field field-bare ml-1 min-h-11 flex-1 text-[15px]"
+            className="field field-bare ml-1 min-h-11 flex-1 text-base"
             aria-label="Rinomina l'idea"
             onBlur={(event) => {
               const next = event.target.value.trim();
@@ -114,7 +114,7 @@ export const IdeaCard = memo(function IdeaCard({
         ) : (
           <button
             type="button"
-            className="ml-1 min-h-11 flex-1 truncate py-2 text-left text-[15px]"
+            className="ml-1 min-h-11 flex-1 truncate py-2 text-left text-base"
             onDoubleClick={() => setEditing(true)}
             onClick={(event) => {
               // Con una selezione già aperta il tocco continua a selezionare:

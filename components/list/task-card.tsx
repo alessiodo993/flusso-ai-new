@@ -110,7 +110,7 @@ export const TaskCard = memo(function TaskCard({
           checked={done}
           onChange={() => onToggleDone(task)}
           aria-label={done ? `Riapri «${task.title}»` : `Segna «${task.title}» come fatto`}
-          className="mt-2.5 size-[18px] shrink-0 accent-[var(--accent)]"
+          className="mt-2.5 size-5 shrink-0 accent-[var(--accent)]"
         />
 
         <div className="min-w-0 flex-1 py-1">
@@ -118,7 +118,7 @@ export const TaskCard = memo(function TaskCard({
             <input
               autoFocus
               defaultValue={task.title}
-              className="field field-bare w-full text-[15px]"
+              className="field field-bare w-full text-base"
               aria-label="Rinomina il task"
               onBlur={(event) => {
                 const next = event.target.value.trim();
@@ -134,7 +134,7 @@ export const TaskCard = memo(function TaskCard({
             <button
               type="button"
               className={cn(
-                "block w-full text-balance text-left text-[15px] leading-snug",
+                "block w-full text-balance text-left text-base leading-snug",
                 done && "text-ink-faint line-through",
               )}
               {...titleHandlers}
@@ -165,7 +165,7 @@ export const TaskCard = memo(function TaskCard({
           >
             <Star
               className={cn(
-                "size-4",
+                "size-[18px]",
                 task.is_daily_highlight && "fill-current text-accent",
               )}
             />
@@ -178,7 +178,7 @@ export const TaskCard = memo(function TaskCard({
             title="Pianifica"
             onClick={() => onSchedule(task)}
           >
-            <CalendarPlus className="size-4" />
+            <CalendarPlus className="size-[18px]" />
           </button>
 
           <button
@@ -187,7 +187,7 @@ export const TaskCard = memo(function TaskCard({
             aria-label={`Elimina «${task.title}»`}
             onClick={() => onDelete(task)}
           >
-            <Trash2 className="size-4" />
+            <Trash2 className="size-[18px]" />
           </button>
         </div>
       </ItemMenu>

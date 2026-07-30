@@ -38,7 +38,7 @@ export function PlannedVsDoneChart({ series }: { series: DayTotals[] }) {
                 style={{ height: `${(day.done / max) * 100}%` }}
               />
             </div>
-            <span className="tnum text-center text-[10px] text-ink-faint">
+            <span className="tnum text-center text-[11px] text-ink-faint">
               {fmtDayNumber(day.day)}
             </span>
           </div>

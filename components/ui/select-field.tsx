@@ -38,7 +38,7 @@ export function SelectField({
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         className={cn(
-          "field h-9 min-h-9 w-full appearance-none py-0 pr-8 text-sm",
+          "field h-10 min-h-10 w-full appearance-none py-0 pr-8 text-sm",
           !value && "text-ink-faint",
         )}
       >

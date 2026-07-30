@@ -12,7 +12,6 @@ import { NotificationOptIn } from "@/components/calendar/notification-opt-in";
 import { RitualPrompt } from "@/components/rituals/ritual-prompt";
 import { ScheduleSheet } from "@/components/list/schedule-sheet";
 import { TaskSheet } from "@/components/list/task-sheet";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ZOOMS, type Zoom } from "@/lib/calendar-layout";
 import { emit } from "@/lib/events";
 import { useBlocks } from "@/lib/hooks/use-blocks";
@@ -84,6 +83,9 @@ export function CalendarSection() {
     return map;
   }, [byDay]);
 
+  const vuoto =
+    scheduled.length === 0 && fixed.length === 0 && googleEvents.length === 0;
+
   const plannedMinutes = scheduled.reduce(
     (total, task) => total + (task.est_minutes ?? 0),
     0,
@@ -95,7 +97,13 @@ export function CalendarSection() {
       <div className="sticky top-0 z-20 border-b border-line bg-surface/95 backdrop-blur-md">
         <DayStrip day={day} onChange={setDay} counts={counts} />
 
-        <div className="flex items-center gap-2 px-3 pb-2">
+        {/*
+          Va a capo, e non è un ripiego: a 390px la data, il totale e i due
+          selettori non ci stanno su una riga sola — con `overflow-hidden` sul
+          pannello i livelli di zoom finivano **tagliati fuori dallo schermo**,
+          irraggiungibili col dito. Da 1080px in su tornano tutti in linea.
+        */}
+        <div className="flex flex-wrap items-center gap-2 px-3 pb-2">
           {/* Su schermi stretti la data si accorcia invece di andare a capo:
               una riga in più nell'intestazione è una riga in meno di giornata. */}
           <p className="min-w-0 flex-1 truncate text-sm first-letter:uppercase">
@@ -116,6 +124,7 @@ export function CalendarSection() {
             </span>
           )}
 
+          <div className="flex w-full items-center gap-2 app:w-auto">
           <div className="seg shrink-0" role="group" aria-label="Vista">
             <button
               type="button"
@@ -139,24 +148,40 @@ export function CalendarSection() {
               i tre numeri da soli non direbbero cosa stanno regolando. Nella
               vista settimana non c'è niente da ingrandire: sparisce. */}
           {view === "giorno" && (
-          <div className="seg shrink-0" role="group" aria-label="Livello di zoom">
-            {ZOOMS.map((level) => (
-              <button
-                key={level}
-                type="button"
-                data-on={effectiveZoom === level}
-                aria-pressed={effectiveZoom === level}
-                onClick={() => setZoom(level)}
-                className="tnum px-2"
-              >
-                {level}
-                {/* Senza opacità: al 70% questo suffisso scendeva sotto il 4.5:1, e
-                    la gerarchia la fa già la dimensione. */}
-                <span className="ml-0.5 text-[10px]">min</span>
-              </button>
-            ))}
-          </div>
+            <div
+              className="seg ml-auto shrink-0"
+              role="group"
+              aria-label="Livello di zoom"
+            >
+              {ZOOMS.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  data-on={effectiveZoom === level}
+                  aria-pressed={effectiveZoom === level}
+                  onClick={() => setZoom(level)}
+                  // Senza il suffisso il pulsante scendeva a 29px di larghezza:
+                  // alto abbastanza per il dito, stretto no.
+                  className="tnum min-w-11 px-1.5"
+                >
+                  {level}
+                  {/*
+                    Il suffisso sparisce sotto i 640px, e non è una svista: a
+                    390px i due selettori con «min» sforano la cornice, che ha
+                    `overflow-hidden`, e il livello da 60 finiva **tagliato**.
+                    Meglio tre numeri interi che un comando dimezzato; il senso
+                    resta nell'`aria-label` del gruppo.
+                    Senza opacità: al 70% questo suffisso scendeva sotto il
+                    4.5:1, e la gerarchia la fa già la dimensione.
+                  */}
+                  <span className="ml-0.5 hidden text-[11px] sm:inline">
+                    min
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
+          </div>
         </div>
       </div>
 
@@ -166,24 +191,35 @@ export function CalendarSection() {
 
       {view === "settimana" ? (
         <WeekView day={day} onSelectDay={(next) => { setDay(next); setView("giorno"); }} onOpenTask={setOpenTask} />
-      ) : scheduled.length === 0 && fixed.length === 0 && googleEvents.length === 0 ? (
-        <EmptyState
-          Icon={CalendarDays}
-          title="Giornata libera"
-          description="Trascina qui un task dalla Lista o da Idee, oppure lascia che sia l'AI a trovare gli slot."
-          action={
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => emit("flusso:open-planner", {})}
-            >
-              <Sparkles className="size-4" />
-              Pianifica con AI
-            </button>
-          }
-        />
       ) : (
         <div className="p-3">
+          {/*
+            La griglia c'è **anche quando il giorno è vuoto**. Prima al suo
+            posto compariva uno stato vuoto a tutta altezza, e con due
+            conseguenze: le ore sparivano proprio quando servono di più — per
+            decidere *dove* mettere qualcosa bisogna vedere la giornata — e
+            l'invito a «trascinare qui un task» toglieva di mezzo l'unica
+            superficie su cui si può trascinare. L'invito resta, ma come riga
+            sopra la griglia, non al posto suo.
+          */}
+          {vuoto && (
+            <div className="mb-3 flex flex-col gap-2 rounded-flusso-md border border-dashed border-line-strong px-3 py-2.5 sm:flex-row sm:items-center">
+              <p className="flex min-w-0 flex-1 items-center gap-2 text-sm text-ink-soft">
+                <CalendarDays className="size-4 shrink-0 text-ink-faint" />
+                Giornata libera: trascina qui un task, o fatti proporre gli
+                orari.
+              </p>
+              <button
+                type="button"
+                className="btn btn-soft h-10 shrink-0 px-3 text-sm"
+                onClick={() => emit("flusso:open-planner", {})}
+              >
+                <Sparkles className="size-4" />
+                Pianifica con AI
+              </button>
+            </div>
+          )}
+
           <AllDayStrip
             events={allDayEvents}
             calendars={calendarsById}

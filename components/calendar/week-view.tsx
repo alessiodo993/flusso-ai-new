@@ -3,7 +3,6 @@
 import { CalendarDays, Sparkles } from "lucide-react";
 import { useCallback, useMemo } from "react";
 
-import { EmptyState } from "@/components/ui/empty-state";
 import { layoutOverlaps } from "@/lib/calendar-layout";
 import { blockSurface, safeColor, readableInk, withAlpha } from "@/lib/colors";
 import { emit } from "@/lib/events";
@@ -112,6 +111,13 @@ export function WeekView({
     [byDay, googleByDay],
   );
 
+  // Vuota davvero: né task né eventi Google. Guardare i soli minuti
+  // pianificati faceva dichiarare «libera» una settimana piena di riunioni.
+  const vuota = useMemo(
+    () => week.every((one) => layout(one).length === 0),
+    [layout, week],
+  );
+
   const total = week.reduce(
     (sum, one) =>
       sum +
@@ -121,38 +127,41 @@ export function WeekView({
     0,
   );
 
-  if (total === 0) {
-    return (
-      <EmptyState
-        Icon={CalendarDays}
-        title="Settimana libera"
-        description="Niente in programma nei prossimi sette giorni. È un'occasione o una svista: decidi tu."
-        action={
+  const height = (bounds.end - bounds.start) * (HOUR / 60);
+
+  return (
+    <div className="p-3">
+      {/*
+        La griglia resta anche a settimana vuota: sette colonne di ore vuote
+        dicono *dove* c'è spazio, uno stato vuoto a tutta altezza no. Il
+        conteggio, per giunta, guardava solo i task: una settimana di sole
+        riunioni Google si dichiarava libera.
+      */}
+      {vuota && (
+        <div className="mb-3 flex flex-col gap-2 rounded-flusso-md border border-dashed border-line-strong px-3 py-2.5 sm:flex-row sm:items-center">
+          <p className="flex min-w-0 flex-1 items-center gap-2 text-sm text-ink-soft">
+            <CalendarDays className="size-4 shrink-0 text-ink-faint" />
+            Sette giorni liberi. È un&apos;occasione o una svista: decidi tu.
+          </p>
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-soft h-10 shrink-0 px-3 text-sm"
             onClick={() => emit("flusso:open-planner", {})}
           >
             <Sparkles className="size-4" />
             Pianifica con AI
           </button>
-        }
-      />
-    );
-  }
+        </div>
+      )}
 
-  const height = (bounds.end - bounds.start) * (HOUR / 60);
-
-  return (
-    <div className="p-3">
       <div className="flex gap-1">
         {/* Colonna delle ore */}
-        <div className="w-9 shrink-0 pt-7">
+        <div className="w-10 shrink-0 pt-8">
           <div className="relative" style={{ height }}>
             {hours.map((minute) => (
               <span
                 key={minute}
-                className="tnum absolute -translate-y-1/2 text-[10px] text-ink-faint"
+                className="tnum absolute -translate-y-1/2 text-[11px] text-ink-faint"
                 style={{ top: (minute - bounds.start) * (HOUR / 60) }}
               >
                 {fmtMin(minute)}
@@ -174,7 +183,7 @@ export function WeekView({
                 type="button"
                 onClick={() => onSelectDay(one)}
                 className={cn(
-                  "mb-1 flex h-6 w-full flex-col items-center justify-center rounded-flusso-sm text-[11px] leading-none",
+                  "mb-1 flex h-7 w-full flex-col items-center justify-center gap-px rounded-flusso-sm text-xs leading-none",
                   one === today ? "bg-accent text-accent-ink" : "text-ink-soft",
                   one === day && one !== today && "bg-sunken",
                 )}
@@ -226,7 +235,7 @@ export function WeekView({
                       <div
                         key={item.id}
                         title={`${fmtMin(start)} · ${item.title}`}
-                        className="absolute overflow-hidden rounded-[3px] border-l-2 px-0.5 text-[9px] leading-tight"
+                        className="absolute overflow-hidden rounded-[3px] border-l-2 px-0.5 text-[10px] leading-tight"
                         style={{
                           top,
                           height,
@@ -254,7 +263,7 @@ export function WeekView({
                       onClick={() => onOpenTask(item)}
                       title={`${fmtMin(start)} · ${item.title}`}
                       className={cn(
-                        "absolute overflow-hidden rounded-[3px] px-0.5 text-left text-[9px] leading-tight",
+                        "absolute overflow-hidden rounded-[3px] px-0.5 text-left text-[10px] leading-tight",
                         item.status === "done" && "opacity-50",
                       )}
                       style={{

@@ -133,10 +133,15 @@ export function visibleWindow({
 }
 
 /** Altezza in pixel di un'ora, per ciascun livello di zoom. */
+/*
+ * Alzate insieme alla scala tipografica: erano 176/112/72, misurate su un
+ * testo più piccolo. Con i corpi nuovi un blocco da mezz'ora al minimo zoom
+ * stringeva titolo e orario fino a farli sbattere contro i bordi.
+ */
 export const HOUR_HEIGHT: Record<number, number> = {
-  15: 176,
-  30: 112,
-  60: 72,
+  15: 200,
+  30: 128,
+  60: 84,
 };
 
 export const ZOOMS = [15, 30, 60] as const;

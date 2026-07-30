@@ -152,7 +152,7 @@ export const TaskBlock = memo(function TaskBlock({
       >
         <span
           className={cn(
-            "flex items-center gap-1 text-[13px] font-medium leading-tight",
+            "flex items-center gap-1 text-sm font-medium leading-tight",
             done && "line-through",
           )}
         >
@@ -163,7 +163,7 @@ export const TaskBlock = memo(function TaskBlock({
         </span>
 
         {shownHeight > 40 && (
-          <span className="tnum mt-0.5 block text-[11px]">
+          <span className="tnum mt-0.5 block text-xs">
             {fmtMin(start)}–{fmtMin(start + minutes)}
           </span>
         )}
@@ -191,7 +191,7 @@ export const TaskBlock = memo(function TaskBlock({
               : `Avvia il focus su «${task.title}»`
           }
           title={micro ? "Solo 10 minuti" : "Avvia il focus"}
-          className="flex size-6 items-center justify-center rounded-full bg-black/10 text-[9px] font-semibold backdrop-blur-sm"
+          className="flex size-6 items-center justify-center rounded-full bg-black/10 text-[10px] font-semibold backdrop-blur-sm"
         >
           {micro ? "10" : <Play className="size-3 fill-current" />}
         </button>

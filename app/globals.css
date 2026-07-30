@@ -20,20 +20,27 @@
    * l'ha trovato axe: era leggibile per me e non per chi ha una vista
    * normale al sole, che è esattamente il caso che la soglia difende.
    */
-  --ink-soft: #4b584f;
-  --ink-faint: #636d66;
-  --line: #e7e1d6;
-  --line-strong: #d3cabb;
+  /*
+   * Scuriti di un gradino (da #4b584f e #636d66). La soglia di axe la
+   * passavano già, ma «passa il 4.5:1» e «si legge al volo su un telefono in
+   * mano» non sono la stessa cosa: metà del testo dell'app — chip, orari,
+   * etichette — sta in questi due grigi.
+   */
+  --ink-soft: #3c4842;
+  --ink-faint: #4e5a53;
+  /* Separatori più netti: a #e7e1d6 le righe fra i task si vedevano appena. */
+  --line: #ded6c8;
+  --line-strong: #c4b9a6;
 
-  --accent: #3f6b4f; /* verde bosco */
+  --accent: #35624a; /* verde bosco, un po' più profondo */
   --accent-ink: #ffffff;
-  --accent-soft: rgb(63 107 79 / 0.1);
-  --accent-hover: #355c43;
+  --accent-soft: rgb(53 98 74 / 0.14);
+  --accent-hover: #2b533e;
 
-  --warn: #8f5f16; /* ambra: scadenze entro due giorni */
-  --warn-soft: rgb(168 113 28 / 0.12);
-  --danger: #a94a3e; /* rosso desaturato: scadute */
-  --danger-soft: rgb(169 74 62 / 0.12);
+  --warn: #855613; /* ambra: scadenze entro due giorni */
+  --warn-soft: rgb(168 113 28 / 0.16);
+  --danger: #9e4034; /* rosso desaturato: scadute */
+  --danger-soft: rgb(169 74 62 / 0.15);
 
   --shadow-lift:
     0 1px 2px rgb(29 43 34 / 0.05), 0 8px 24px rgb(29 43 34 / 0.06);
@@ -55,23 +62,24 @@
   --surface: #1b1f23;
   --surface-sunken: #101316;
   --ink: #e8ece8;
-  --ink-soft: #b3bdb6;
-  --ink-faint: #8a948d;
-  --line: #2a3036;
-  --line-strong: #3c444b;
+  /* Al buio si va nella direzione opposta: più chiari, stessa ragione. */
+  --ink-soft: #c3cdc6;
+  --ink-faint: #9ea8a1;
+  --line: #333a41;
+  --line-strong: #4b545c;
 
-  --accent: #6f9d7d;
-  --accent-ink: #10241a;
-  --accent-soft: rgb(111 157 125 / 0.14);
-  --accent-hover: #7fae8c;
+  --accent: #7dab8a;
+  --accent-ink: #0e2117;
+  --accent-soft: rgb(125 171 138 / 0.18);
+  --accent-hover: #8dbb99;
 
-  --warn: #d3a250;
-  --warn-soft: rgb(211 162 80 / 0.16);
+  --warn: #dcaa56;
+  --warn-soft: rgb(211 162 80 / 0.2);
   /* Schiarito da #d1786b: sulla chip tinta stava a 4.17. `--danger` qui è
      sempre e solo colore di testo — anche `.btn-danger` ha sfondo
      trasparente — quindi schiarirlo non peggiora nulla. */
-  --danger: #e08d80;
-  --danger-soft: rgb(209 120 107 / 0.16);
+  --danger: #e79a8e;
+  --danger-soft: rgb(209 120 107 / 0.2);
 
   --shadow-lift: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
   --shadow-pop: 0 2px 4px rgb(0 0 0 / 0.35), 0 16px 40px rgb(0 0 0 / 0.5);
@@ -96,6 +104,28 @@
 
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display-face), ui-serif, Georgia, serif;
+
+  /*
+   * La scala tipografica, un gradino sopra quella predefinita di Tailwind.
+   *
+   * Si cambia **qui** e non nei componenti: `text-sm` compare 99 volte e
+   * `text-xs` 57, e ritoccarle a mano avrebbe significato centocinquanta
+   * decisioni indipendenti destinate a divergere. Ridefinire la scala le fa
+   * crescere tutte insieme, mantenendo i rapporti fra i livelli.
+   *
+   * Le interlinee crescono meno della dimensione: a corpo maggiore serve
+   * proporzionalmente meno aria, altrimenti i blocchi di testo si sfaldano.
+   */
+  --text-xs: 0.8125rem; /* 13px, era 12 */
+  --text-xs--line-height: 1.35;
+  --text-sm: 0.9375rem; /* 15px, era 14 */
+  --text-sm--line-height: 1.45;
+  --text-base: 1.0625rem; /* 17px, era 16 */
+  --text-base--line-height: 1.5;
+  --text-lg: 1.1875rem; /* 19px, era 18 */
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.375rem; /* 22px, era 20 */
+  --text-xl--line-height: 1.3;
 
   --radius-flusso: var(--radius);
   --radius-flusso-sm: var(--radius-sm);
@@ -164,12 +194,12 @@
     gap: 0.5rem;
     /* Bersaglio pieno su telefono; da 1080px in su si stringe, perché lì c'è
        un puntatore. Le utility `h-8`/`h-9` restano ma non scendono sotto. */
-    min-height: 44px;
-    padding: 0 0.875rem;
+    min-height: 48px;
+    padding: 0 1.125rem;
     border-radius: var(--radius-sm);
     border: 1px solid transparent;
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: 0.9375rem;
+    font-weight: 550;
     line-height: 1;
     cursor: pointer;
     transition:
@@ -181,7 +211,7 @@
 
   @media (min-width: 1080px) {
     .btn {
-      min-height: 2.25rem;
+      min-height: 2.5rem;
     }
   }
 
@@ -259,8 +289,8 @@
   /* Variante compatta: resta cliccabile grazie all'area estesa in ::after. */
   .icon-btn-sm {
     position: relative;
-    min-width: 2rem;
-    min-height: 2rem;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
   }
 
   .icon-btn-sm::after {
@@ -294,12 +324,15 @@
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.125rem 0.5rem;
+    padding: 0.1875rem 0.625rem;
     border-radius: 999px;
     border: 1px solid var(--line);
     background: var(--surface);
     color: var(--ink-soft);
-    font-size: 0.75rem;
+    /* 13px: le chip portano informazione vera — scadenza, stima, energia — e
+       a 12px si leggevano solo guardandole apposta. */
+    font-size: 0.8125rem;
+    font-weight: 500;
     line-height: 1.4;
     white-space: nowrap;
   }
@@ -357,11 +390,11 @@
      * col pollice mentre si cammina. Da 1080px in su si stringono, perché lì
      * c'è un puntatore e un controllo alto 44px ruba spazio alla giornata.
      */
-    min-height: 44px;
-    padding: 0.375rem 0.75rem;
+    min-height: 46px;
+    padding: 0.375rem 0.875rem;
     border-radius: 999px;
-    font-size: 0.8125rem;
-    font-weight: 500;
+    font-size: 0.875rem;
+    font-weight: 550;
     color: var(--ink-soft);
     cursor: pointer;
     transition:
@@ -371,7 +404,7 @@
 
   @media (min-width: 1080px) {
     .seg > button {
-      min-height: 2.125rem;
+      min-height: 2.25rem;
     }
   }
 
@@ -387,13 +420,18 @@
   /* --- Campi ------------------------------------------------------------- */
   .field {
     width: 100%;
-    min-height: 2.5rem;
-    padding: 0.5rem 0.75rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.875rem;
     border-radius: var(--radius-sm);
     border: 1px solid var(--line);
     background: var(--surface);
     color: var(--ink);
-    font-size: 0.9375rem;
+    /*
+     * 16px esatti, e non per gusto: sotto questa soglia iOS **ingrandisce la
+     * pagina** appena il campo prende il fuoco, e poi la lascia ingrandita.
+     * Con Flusso installata come app da telefono succedeva a ogni cattura.
+     */
+    font-size: 1rem;
     transition: border-color 150ms ease-out;
   }
 
@@ -419,10 +457,10 @@
 
   /* --- Testo ------------------------------------------------------------- */
   .label {
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.8125rem;
+    font-weight: 550;
     color: var(--ink-faint);
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em;
   }
 
   .hairline {
