@@ -35,6 +35,7 @@ export function PlannerSheet() {
   const [placements, setPlacements] = useState<Placement[] | null>(null);
   const [unplaced, setUnplaced] = useState<Array<{ taskId: string; reason: string }>>([]);
   const [note, setNote] = useState("");
+  const [aiReasons, setAiReasons] = useState<Map<string, string>>(new Map());
 
   const today = todayISO();
   const { tasks, byId: tasksById } = useTasks();
@@ -53,6 +54,7 @@ export function PlannerSheet() {
     setPlacements(null);
     setUnplaced([]);
     setNote("");
+    setAiReasons(new Map());
     plan.reset();
   }, [plan]);
 
@@ -99,6 +101,13 @@ export function PlannerSheet() {
       {
         onSuccess: ({ scelte, nota }) => {
           setNote(nota);
+          setAiReasons(
+            new Map(
+              scelte
+                .filter((choice) => choice.motivo)
+                .map((choice) => [choice.taskId, choice.motivo]),
+            ),
+          );
           // L'ordine dell'AI è la sua priorità: il solver riceve i task già
           // in quell'ordine e non lo ribalta se non per i suoi criteri.
           const chosen = scelte
@@ -193,6 +202,7 @@ export function PlannerSheet() {
           placements={placements}
           unplaced={unplaced}
           note={[context.capMessage, note].filter(Boolean).join(" ")}
+          aiReasons={aiReasons}
           tasksById={tasksById}
           projectsById={projectsById}
           settings={context.settings}

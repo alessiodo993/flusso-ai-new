@@ -57,17 +57,24 @@ Esiste solo in sviluppo.
 |---|---|
 | `npm run dev` | server di sviluppo |
 | `npm run build` | build di produzione |
-| `npm test` | 319 test su tutta la logica pura |
+| `npm test` | 390 test su tutta la logica pura |
 | `npm run typecheck` | TypeScript in modalità strict |
 | `npm run lint` | ESLint |
 | `npm run db:test` | applica le migrazioni su un Postgres locale e verifica RLS e privilegi |
 | `npm run a11y` | axe su sette schermate, tema chiaro e scuro |
 | `npm run keyboard` | fuoco visibile, navigazione col Tab, bersagli tattili |
+| `npm run allineamento` | i controlli di riga allineati alla prima riga del titolo |
+| `npm run cattura` | cattura magica e planner nel browser, con le route AI finte |
+| `npm run ai:vero` | i prompt contro il modello vero (serve `ANTHROPIC_API_KEY`, e costa) |
 | `npm run shots` | screenshot delle schermate principali |
 | `npm run deploy` | pubblica su Vercel (serve `VERCEL_TOKEN`) |
 
-I due ultimi controlli vogliono `npm run dev` già avviato in un altro
-terminale.
+I controlli col browser — `a11y`, `keyboard`, `allineamento`, `cattura` —
+vogliono `npm run dev` già avviato in un altro terminale.
+
+`npm run ai:vero` è l'unico che chiama davvero il modello: gli altri test
+dimostrano che il codice regge qualunque risposta, quello guarda se le
+risposte sono **buone**. Sta fuori da `npm test` apposta: costa e vuole rete.
 
 ## Com'è fatto
 

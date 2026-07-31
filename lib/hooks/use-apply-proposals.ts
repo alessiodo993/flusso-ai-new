@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
+import { mergePatch } from "@/lib/ai/capture";
 import type { CaptureProposal } from "@/lib/ai/schemas";
 import {
   useCreateTasks,
@@ -62,16 +63,12 @@ export function useApplyProposals() {
 
         for (const one of merged) {
           if (!one.taskId) continue;
-          await update.mutateAsync({
-            id: one.taskId,
-            title: one.title,
-            // Un merge aggiorna solo ciò che la frase ha effettivamente detto:
-            // i campi che l'AI non ha dedotto non devono cancellare i vecchi.
-            ...(one.projectId ? { project_id: one.projectId } : {}),
-            ...(one.deadline ? { deadline: one.deadline } : {}),
-            ...(one.estMinutes ? { est_minutes: one.estMinutes } : {}),
-            ...(one.energy ? { energy: one.energy } : {}),
-          });
+          const target = tasks.find((task) => task.id === one.taskId);
+          if (!target) continue;
+          // Un merge aggiorna solo ciò che la frase ha effettivamente detto, e
+          // aggiunge in coda note e passaggi invece di sostituirli: vedi
+          // `mergePatch`.
+          await update.mutateAsync({ id: one.taskId, ...mergePatch(target, one) });
         }
 
         for (const one of completed) {

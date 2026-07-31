@@ -37,8 +37,11 @@ type EventMap = {
    * Apre la cattura magica: una frase intera da far interpretare all'AI,
    * eventualmente dettata. È un'altra cosa dalla cattura rapida — lì si
    * scrive un titolo, qui si scarica un pensiero e si rivede il risultato.
+   *
+   * `text` porta dentro quello che l'utente aveva già scritto altrove: chi
+   * preme la bacchetta a metà frase non deve ricominciare da capo.
    */
-  "flusso:magic-capture": { voice?: boolean };
+  "flusso:magic-capture": { voice?: boolean; text?: string };
   "flusso:open-settings": Record<string, never>;
   /** Realtà vs Piano. */
   "flusso:open-calibration": Record<string, never>;

@@ -8,7 +8,8 @@ import {
   type CaptureProposal,
   type captureSchema,
 } from "@/lib/ai/schemas";
-import type { Project, Task } from "@/lib/types";
+import type { Project, Subtask, Task } from "@/lib/types";
+import { uid } from "@/lib/utils";
 import type { z } from "zod";
 
 /**
@@ -74,6 +75,60 @@ export function normalizeCapture({
   }
 
   return proposals;
+}
+
+/**
+ * Cosa cambia davvero in un task quando si accetta un «unisci».
+ *
+ * Sovrascrivere sarebbe la cosa ovvia e sbagliata: la frase dettata parla di
+ * un pezzo del task, non lo ridefinisce. Le note dell'utente e i sottotask
+ * che ha già spuntato sono lavoro suo, e un merge che li rimpiazza li
+ * distrugge senza dirlo — per giunta partendo da un campo che nella revisione
+ * si vede appena. Quindi: i campi dedotti sovrascrivono solo se ci sono,
+ * testo e passaggi si **aggiungono** in coda, e ciò che c'è già non si
+ * duplica.
+ */
+export function mergePatch(
+  task: Task,
+  proposal: CaptureProposal,
+): {
+  title: string;
+  project_id?: string;
+  deadline?: string;
+  est_minutes?: number;
+  energy?: NonNullable<CaptureProposal["energy"]>;
+  notes?: string;
+  subtasks?: Subtask[];
+} {
+  const existing = new Set(
+    task.subtasks.map((one) => one.text.trim().toLowerCase()),
+  );
+
+  const added = proposal.subtasks
+    .filter((text) => {
+      const key = text.trim().toLowerCase();
+      if (!key || existing.has(key)) return false;
+      existing.add(key);
+      return true;
+    })
+    .map((text) => ({ id: uid(), text, done: false }));
+
+  const previous = (task.notes ?? "").trim();
+  const incoming = proposal.notes.trim();
+  const noteIsNew =
+    incoming.length > 0 && !previous.toLowerCase().includes(incoming.toLowerCase());
+
+  return {
+    title: proposal.title,
+    ...(proposal.projectId ? { project_id: proposal.projectId } : {}),
+    ...(proposal.deadline ? { deadline: proposal.deadline } : {}),
+    ...(proposal.estMinutes ? { est_minutes: proposal.estMinutes } : {}),
+    ...(proposal.energy ? { energy: proposal.energy } : {}),
+    ...(noteIsNew
+      ? { notes: previous ? `${previous}\n${incoming}` : incoming }
+      : {}),
+    ...(added.length > 0 ? { subtasks: [...task.subtasks, ...added] } : {}),
+  };
 }
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { normalizeCapture, captureContext } from "./capture";
+import { normalizeCapture, captureContext, mergePatch } from "./capture";
 import { AiError, parseJson } from "./client";
 import {
   toAction,
@@ -10,6 +10,7 @@ import {
   toEstimate,
   toText,
   captureSchema,
+  type CaptureProposal,
 } from "./schemas";
 import type { Project, Task } from "@/lib/types";
 
@@ -300,6 +301,88 @@ describe("normalizeCapture", () => {
     expect(normalizeCapture({ ...base, raw })[0].title).toBe(
       "Chiamare il relatore",
     );
+  });
+});
+
+describe("mergePatch", () => {
+  const base = task({
+    id: "t1",
+    title: "Rivedere il capitolo 2",
+    notes: "Il relatore vuole più fonti.",
+    est_minutes: 90,
+    deadline: "2026-08-10",
+    subtasks: [
+      { id: "s1", text: "Rileggere gli appunti", done: true },
+      { id: "s2", text: "Aggiornare la bibliografia", done: false },
+    ],
+  });
+
+  const proposal = (over: Partial<CaptureProposal>): CaptureProposal => ({
+    id: "unisci-0-t1",
+    action: "unisci",
+    title: "Rivedere il capitolo 2",
+    taskId: "t1",
+    projectId: null,
+    deadline: null,
+    estMinutes: null,
+    energy: null,
+    subtasks: [],
+    notes: "",
+    reason: "",
+    ...over,
+  });
+
+  it("non tocca ciò di cui la frase non ha parlato", () => {
+    const patch = mergePatch(base, proposal({ title: "Rivedere il capitolo 2" }));
+    expect(patch).toEqual({ title: "Rivedere il capitolo 2" });
+  });
+
+  it("sovrascrive solo i campi dedotti", () => {
+    const patch = mergePatch(
+      base,
+      proposal({ estMinutes: 120, energy: "alta" }),
+    );
+    expect(patch.est_minutes).toBe(120);
+    expect(patch.energy).toBe("alta");
+    expect(patch.deadline).toBeUndefined();
+  });
+
+  it("**le note si aggiungono in coda, non al posto delle altre**", () => {
+    // Sovrascrivere significherebbe cancellare quello che l'utente si era
+    // scritto, a partire da un campo che nella revisione si legge di sfuggita.
+    const patch = mergePatch(base, proposal({ notes: "Chiedere a Marta." }));
+    expect(patch.notes).toBe("Il relatore vuole più fonti.\nChiedere a Marta.");
+  });
+
+  it("non riscrive una nota che c'è già", () => {
+    const patch = mergePatch(
+      base,
+      proposal({ notes: "il relatore vuole più fonti." }),
+    );
+    expect(patch.notes).toBeUndefined();
+  });
+
+  it("**i sottotask spuntati sopravvivono al merge**", () => {
+    const patch = mergePatch(
+      base,
+      proposal({ subtasks: ["Rileggere gli appunti", "Rifare i grafici"] }),
+    );
+    expect(patch.subtasks?.map((one) => one.text)).toEqual([
+      "Rileggere gli appunti",
+      "Aggiornare la bibliografia",
+      "Rifare i grafici",
+    ]);
+    // Quello già fatto resta fatto: un duplicato non spuntato lo farebbe
+    // ricomparire da fare.
+    expect(patch.subtasks?.[0].done).toBe(true);
+  });
+
+  it("senza passaggi nuovi non tocca la lista", () => {
+    const patch = mergePatch(
+      base,
+      proposal({ subtasks: ["  rileggere gli appunti "] }),
+    );
+    expect(patch.subtasks).toBeUndefined();
   });
 });
 

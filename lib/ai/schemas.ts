@@ -118,6 +118,15 @@ export const shutdownSchema = z.object({
 /** Massimo di proposte accettate da una sola cattura. */
 export const MAX_PROPOSALS = 12;
 
+/**
+ * Quanto testo può entrare in una cattura sola.
+ *
+ * Lo conoscono sia la route sia il campo di testo: se lo sapesse solo il
+ * server, una dettatura lunga si scoprirebbe troppo lunga **dopo** averla
+ * fatta, con un errore invece che con un limite visibile.
+ */
+export const MAX_CAPTURE_CHARS = 4000;
+
 /** Estremi di una stima, in minuti. */
 export const MIN_EST = 5;
 export const MAX_EST = 480;

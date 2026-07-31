@@ -14,6 +14,8 @@
     "a11y": "node scripts/a11y.mjs",
     "keyboard": "node scripts/keyboard.mjs",
     "allineamento": "node scripts/allineamento.mjs",
+    "cattura": "node scripts/prova-cattura.mjs",
+    "ai:vero": "PROVA_AI=1 vitest run tests/ai-live.test.ts",
     "deploy": "bash scripts/deploy-vercel.sh",
     "db:setup-check": "bash scripts/setup-sql-check.sh"
   },

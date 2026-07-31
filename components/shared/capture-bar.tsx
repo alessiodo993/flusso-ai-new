@@ -95,7 +95,13 @@ export function CaptureBar({
           className="icon-btn shrink-0"
           aria-label="Interpreta con l'AI"
           title="Interpreta con l'AI"
-          onClick={() => emit("flusso:magic-capture", { voice: false })}
+          onClick={() => {
+            // Quello che c'è nel campo se ne va con la bacchetta invece di
+            // restare qui a fare da doppione: chi preme mentre sta scrivendo
+            // sta chiedendo di interpretare *quella* frase, non di riscriverla.
+            emit("flusso:magic-capture", { voice: false, text: title.trim() });
+            setTitle("");
+          }}
         >
           <Wand2 className="size-[18px]" />
         </button>

@@ -6,7 +6,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { AiErrorNotice } from "@/components/ai/ai-error";
 import { ProposalCard } from "@/components/ai/proposal-card";
 import { ResponsiveSheet } from "@/components/shell/responsive-sheet";
-import type { CaptureProposal } from "@/lib/ai/schemas";
+import { MAX_CAPTURE_CHARS, type CaptureProposal } from "@/lib/ai/schemas";
 import { useFlussoEvent } from "@/lib/events";
 import { useAiCapture } from "@/lib/hooks/use-ai";
 import { useApplyProposals } from "@/lib/hooks/use-apply-proposals";
@@ -48,9 +48,12 @@ export function MagicCapture() {
   useFlussoEvent(
     "flusso:magic-capture",
     useCallback(
-      ({ voice }) => {
+      ({ voice, text: incoming }) => {
         setOpen(true);
         reset();
+        // Chi arriva dalla barra di cattura ha già scritto: quel testo entra
+        // qui. Se non porta niente, resta quello di prima invece di sparire.
+        if (incoming) setText(incoming);
         // Il microfono parte solo se è stato chiesto esplicitamente.
         if (voice) speech.start();
         else setTimeout(() => textarea.current?.focus(), 50);
@@ -78,6 +81,8 @@ export function MagicCapture() {
       },
     });
   }, [capture, speech, text]);
+
+  const troppoLungo = text.length > MAX_CAPTURE_CHARS;
 
   const toApply = useMemo(
     () => (proposals ?? []).filter((one) => accepted.has(one.id)),
@@ -132,7 +137,7 @@ export function MagicCapture() {
           <button
             type="button"
             className="btn btn-primary w-full"
-            disabled={!text.trim() || capture.isPending}
+            disabled={!text.trim() || troppoLungo || capture.isPending}
             onClick={interpret}
           >
             {capture.isPending ? (
@@ -176,6 +181,23 @@ export function MagicCapture() {
             onChange={(event) => setText(event.target.value)}
             aria-label="Cosa hai in testa"
           />
+
+          {/*
+            Il contatore compare solo in vista del limite. Sempre visibile
+            sarebbe un compito da rispettare mentre si sta svuotando la testa,
+            che è l'opposto di quello che questa schermata serve a fare.
+          */}
+          {text.length > MAX_CAPTURE_CHARS * 0.8 && (
+            <p
+              className={cn(
+                "tnum text-right text-xs",
+                troppoLungo ? "text-danger" : "text-ink-faint",
+              )}
+            >
+              {text.length} / {MAX_CAPTURE_CHARS}
+              {troppoLungo ? " · dividilo in due catture" : ""}
+            </p>
+          )}
 
           {speech.supported && (
             <button

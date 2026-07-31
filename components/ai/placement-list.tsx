@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarX2, Info, X } from "lucide-react";
+import { CalendarX2, Info, Sparkles, X } from "lucide-react";
 
 import { SelectField } from "@/components/ui/select-field";
 import { safeColor } from "@/lib/colors";
@@ -19,6 +19,7 @@ export function PlacementList({
   placements,
   unplaced,
   note,
+  aiReasons,
   tasksById,
   projectsById,
   settings,
@@ -28,6 +29,11 @@ export function PlacementList({
   placements: Placement[];
   unplaced: Array<{ taskId: string; reason: string }>;
   note: string;
+  /**
+   * Perché l'AI ha scelto questo task, per taskId. Vuota quando i task li ha
+   * scelti l'utente: lì la domanda non si pone.
+   */
+  aiReasons?: Map<string, string>;
   tasksById: Map<string, Task>;
   projectsById: Map<string, Project>;
   settings: PlannerSettings;
@@ -104,6 +110,20 @@ export function PlacementList({
                         {fmtDuration(placement.estMinutes)}
                         {placement.reason ? ` · ${placement.reason}` : ""}
                       </p>
+                      {/*
+                        La riga sopra dice perché il blocco sta *lì*; questa
+                        perché il task è stato scelto. Il modello la scrive già
+                        e la si pagava a ogni piano senza mostrarla: si
+                        approvava una selezione senza vederne la ragione.
+                      */}
+                      {aiReasons?.get(placement.taskId) && (
+                        <p className="flex items-start gap-1 text-xs text-ink-soft">
+                          <Sparkles className="mt-0.5 size-3 shrink-0 text-ink-faint" />
+                          <span className="min-w-0 flex-1">
+                            {aiReasons.get(placement.taskId)}
+                          </span>
+                        </p>
+                      )}
                     </div>
 
                     <SelectField

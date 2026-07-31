@@ -5,13 +5,13 @@ import { AiError, askJson } from "@/lib/ai/client";
 import { loadContext } from "@/lib/ai/context";
 import { CAPTURE_SYSTEM, capturePrompt } from "@/lib/ai/prompts";
 import { aiRoute } from "@/lib/ai/route";
-import { captureSchema } from "@/lib/ai/schemas";
+import { captureSchema, MAX_CAPTURE_CHARS } from "@/lib/ai/schemas";
 import { todayISO } from "@/lib/time";
 
 export const runtime = "nodejs";
 
 const input = z.object({
-  testo: z.string().min(1).max(4000),
+  testo: z.string().min(1).max(MAX_CAPTURE_CHARS),
 });
 
 /**
@@ -25,7 +25,18 @@ export async function POST(request: Request) {
   return aiRoute(request, async ({ body }) => {
     const parsed = input.safeParse(body);
     if (!parsed.success) {
-      throw new AiError("unknown", "Scrivi o detta qualcosa da interpretare.");
+      // Due cause diverse, due rimedi diversi: un messaggio solo manderebbe a
+      // cercare cosa scrivere chi ha appena scritto troppo.
+      const tooLong =
+        typeof (body as { testo?: unknown })?.testo === "string" &&
+        (body as { testo: string }).testo.length > MAX_CAPTURE_CHARS;
+
+      throw new AiError(
+        "unknown",
+        tooLong
+          ? `Testo troppo lungo: ${MAX_CAPTURE_CHARS} caratteri al massimo. Dividilo in due catture.`
+          : "Scrivi o detta qualcosa da interpretare.",
+      );
     }
 
     const { tasks, projects } = await loadContext();
