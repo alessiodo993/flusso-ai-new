@@ -1,5 +1,7 @@
 import {
+  captureItem,
   MAX_PROPOSALS,
+  sift,
   toAction,
   toDeadline,
   toEnergy,
@@ -7,6 +9,7 @@ import {
   toText,
   type CaptureProposal,
   type captureSchema,
+  type Sifted,
 } from "@/lib/ai/schemas";
 import type { Project, Subtask, Task } from "@/lib/types";
 import { uid } from "@/lib/utils";
@@ -29,15 +32,18 @@ export function normalizeCapture({
   raw: z.infer<typeof captureSchema>;
   projects: Project[];
   tasks: Task[];
-}): CaptureProposal[] {
+}): Sifted<CaptureProposal> {
   const byName = new Map(
     projects.map((project) => [project.name.trim().toLowerCase(), project.id]),
   );
   const taskIds = new Map(tasks.map((task) => [task.id, task]));
 
-  const proposals: CaptureProposal[] = [];
+  const { items, discarded: malformate } = sift(raw.proposte, captureItem);
 
-  for (const item of raw.proposte ?? []) {
+  const proposals: CaptureProposal[] = [];
+  let discarded = malformate;
+
+  for (const item of items) {
     if (proposals.length >= MAX_PROPOSALS) break;
 
     const action = toAction(item.azione);
@@ -45,12 +51,18 @@ export function normalizeCapture({
 
     // Unire, completare o eliminare ha senso solo su un task che esiste
     // davvero: senza bersaglio la proposta si scarta, non si trasforma in
-    // una creazione a sorpresa.
-    if (action !== "crea" && !target) continue;
+    // una creazione a sorpresa. È lo scarto più frequente — su una frase
+    // lunga il modello cita parecchi task esistenti, e basta un id sbagliato.
+    if (action !== "crea" && !target) {
+      discarded += 1;
+      continue;
+    }
 
-    const title =
-      toText(item.titolo, 200) || (target ? target.title : "");
-    if (!title) continue;
+    const title = toText(item.titolo, 200) || (target ? target.title : "");
+    if (!title) {
+      discarded += 1;
+      continue;
+    }
 
     const projectFromName = item.progetto
       ? byName.get(item.progetto.trim().toLowerCase())
@@ -74,7 +86,7 @@ export function normalizeCapture({
     });
   }
 
-  return proposals;
+  return { items: proposals, discarded };
 }
 
 /**

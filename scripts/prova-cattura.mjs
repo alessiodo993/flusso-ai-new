@@ -70,11 +70,14 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 
+/** La risposta che la route finta darà alla prossima interpretazione. */
+let risposta = { status: 200, body: { ...RISPOSTA_CATTURA, scartate: 0 } };
+
 await page.route("**/api/ai/capture", (route) =>
   route.fulfill({
-    status: 200,
+    status: risposta.status,
     contentType: "application/json",
-    body: JSON.stringify(RISPOSTA_CATTURA),
+    body: JSON.stringify(risposta.body),
   }),
 );
 
@@ -149,6 +152,58 @@ verifica(
 
 await page.keyboard.press("Escape");
 await page.waitForTimeout(500);
+
+// ---------------------------------------------------------------------------
+console.log("\nUna risposta inservibile si dichiara tale, e si può riprovare");
+
+risposta = {
+  status: 502,
+  body: {
+    errore:
+      "Ho capito la frase ma non sono riuscito a ricavarne proposte utilizzabili: si riferivano a task che non esistono più. Riprova.",
+    tipo: "invalid_output",
+  },
+};
+
+await barra.fill("un testo lungo con dentro parecchie cose da fare");
+await page.getByRole("button", { name: "Interpreta con l'AI" }).first().click();
+await page.waitForTimeout(600);
+await page.getByRole("button", { name: "Interpreta" }).click();
+await page.waitForTimeout(900);
+
+const dopoErrore = await page.locator("body").innerText();
+verifica(
+  "**non incolpa chi ha scritto**",
+  !dopoErrore.includes("Non ho trovato niente di azionabile"),
+);
+verifica(
+  "dice cosa è successo davvero",
+  dopoErrore.includes("non sono riuscito a ricavarne proposte utilizzabili"),
+);
+verifica(
+  "offre di riprovare",
+  await page.getByRole("button", { name: "Riprova" }).isVisible(),
+);
+verifica(
+  "il testo scritto resta dov'è",
+  (await page.getByLabel("Cosa hai in testa").inputValue()).length > 0,
+);
+
+// ---------------------------------------------------------------------------
+console.log("\nLe proposte scartate si dichiarano invece di sparire");
+
+risposta = { status: 200, body: { ...RISPOSTA_CATTURA, scartate: 3 } };
+await page.getByRole("button", { name: "Riprova" }).click();
+await page.waitForTimeout(900);
+
+verifica(
+  "l'avviso dice quante ne sono state scartate",
+  (await page.locator("body").innerText()).includes("3 proposte sono state scartate"),
+);
+
+await page.keyboard.press("Escape");
+await page.waitForTimeout(500);
+risposta = { status: 200, body: { ...RISPOSTA_CATTURA, scartate: 0 } };
 
 // ---------------------------------------------------------------------------
 console.log("\nIl planner dice perché ha scelto quei task");

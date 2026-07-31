@@ -4,6 +4,8 @@ import { z } from "zod";
 import { normalizeCapture, captureContext, mergePatch } from "./capture";
 import { AiError, parseJson } from "./client";
 import {
+  keepOrFail,
+  sift,
   toAction,
   toDeadline,
   toEnergy,
@@ -82,6 +84,16 @@ describe("parseJson", () => {
     expect(parseJson(schema, '{"a":1} poi {"a":2}')).toEqual({ a: 1 });
   });
 
+  it("**se il primo oggetto non ha la forma giusta, prova il successivo**", () => {
+    // Capita che il modello scriva un esempio prima della risposta vera.
+    // Fermarsi al primo significava dichiarare illeggibile un output che
+    // conteneva, due righe più sotto, esattamente ciò che serviva.
+    const schema = z.object({ a: z.number() });
+    expect(parseJson(schema, 'tipo {"b":0} ma in realtà {"a":7}')).toEqual({
+      a: 7,
+    });
+  });
+
   it("dice che l'output non è valido invece di lanciare a caso", () => {
     expect(() => parseJson(schema, "non è JSON")).toThrowError(AiError);
     expect(() => parseJson(schema, '{"a":')).toThrowError(AiError);
@@ -139,8 +151,12 @@ describe("normalizzazione dei valori", () => {
 describe("normalizeCapture", () => {
   const base = { projects: PROJECTS, tasks: TASKS };
 
+  /** Le sole proposte utilizzabili: gli scarti si contano a parte. */
+  const capture = (input: Parameters<typeof normalizeCapture>[0]) =>
+    normalizeCapture(input).items;
+
   it("costruisce una proposta di creazione completa", () => {
-    const [proposal] = normalizeCapture({
+    const [proposal] = capture({
       ...base,
       raw: {
         proposte: [
@@ -171,7 +187,7 @@ describe("normalizeCapture", () => {
   });
 
   it("scarta i progetti inventati invece di crearli", () => {
-    const [proposal] = normalizeCapture({
+    const [proposal] = capture({
       ...base,
       raw: { proposte: [{ azione: "crea", titolo: "x", progetto: "Inesistente" }] },
     });
@@ -180,7 +196,7 @@ describe("normalizeCapture", () => {
   });
 
   it("rifiuta unisci, completa ed elimina senza un task che esiste", () => {
-    const proposals = normalizeCapture({
+    const proposals = capture({
       ...base,
       raw: {
         proposte: [
@@ -195,7 +211,7 @@ describe("normalizeCapture", () => {
   });
 
   it("tiene le operazioni su task veri e ne eredita il progetto", () => {
-    const proposals = normalizeCapture({
+    const proposals = capture({
       projects: PROJECTS,
       tasks: [task({ id: "t1", title: "Capitolo 2", project_id: "p1" })],
       raw: {
@@ -224,13 +240,13 @@ describe("normalizeCapture", () => {
 
   it("scarta le proposte senza titolo", () => {
     expect(
-      normalizeCapture({ ...base, raw: { proposte: [{ azione: "crea" }] } }),
+      capture({ ...base, raw: { proposte: [{ azione: "crea" }] } }),
     ).toEqual([]);
   });
 
   it("regge una risposta vuota o senza l'array", () => {
-    expect(normalizeCapture({ ...base, raw: {} })).toEqual([]);
-    expect(normalizeCapture({ ...base, raw: { proposte: [] } })).toEqual([]);
+    expect(capture({ ...base, raw: { proposte: null } })).toEqual([]);
+    expect(capture({ ...base, raw: { proposte: [] } })).toEqual([]);
   });
 
   it("si ferma a dodici proposte", () => {
@@ -239,11 +255,11 @@ describe("normalizeCapture", () => {
       titolo: `task ${i}`,
     }));
 
-    expect(normalizeCapture({ ...base, raw: { proposte } })).toHaveLength(12);
+    expect(capture({ ...base, raw: { proposte } })).toHaveLength(12);
   });
 
   it("dà a ogni proposta un id distinto", () => {
-    const proposals = normalizeCapture({
+    const proposals = capture({
       ...base,
       raw: {
         proposte: [
@@ -268,7 +284,7 @@ describe("normalizeCapture", () => {
       ),
     );
 
-    const proposals = normalizeCapture({
+    const proposals = capture({
       projects: [...PROJECTS, { ...PROJECTS[0], id: "p3", name: "Casa" }],
       tasks: [task({ id: "t1", title: "Riscrivere il capitolo sui metodi" })],
       raw,
@@ -298,9 +314,76 @@ describe("normalizeCapture", () => {
       ),
     );
 
-    expect(normalizeCapture({ ...base, raw })[0].title).toBe(
+    expect(capture({ ...base, raw })[0].title).toBe(
       "Chiamare il relatore",
     );
+  });
+});
+
+describe("**quando la risposta del modello non si può usare**", () => {
+  const base = { projects: PROJECTS, tasks: TASKS };
+
+  it("una chiave di primo livello sbagliata è un errore, non una risposta vuota", () => {
+    // Il difetto che l'utente vedeva come «non ho trovato niente di
+    // azionabile»: con la chiave facoltativa questo JSON passava lo schema
+    // come un successo con zero proposte, e la colpa sembrava sua.
+    expect(() =>
+      parseJson(captureSchema, '{"proposals":[{"azione":"crea","titolo":"X"}]}'),
+    ).toThrowError(AiError);
+  });
+
+  it("**una voce storta non fa cadere le altre undici**", () => {
+    const raw = parseJson(
+      captureSchema,
+      '{"proposte":[{"azione":"crea","titolo":"A"},{"action":"crea","title":"B"},{"azione":"crea","titolo":"C"}]}',
+    );
+    const { items, discarded } = normalizeCapture({ ...base, raw });
+
+    expect(items.map((one) => one.title)).toEqual(["A", "C"]);
+    expect(discarded).toBe(1);
+  });
+
+  it("gli id inventati si contano invece di sparire", () => {
+    const { items, discarded } = normalizeCapture({
+      ...base,
+      raw: {
+        proposte: [
+          { azione: "unisci", titolo: "x", taskId: "mai-esistito" },
+          { azione: "completa", titolo: "y", taskId: "nemmeno" },
+        ],
+      },
+    });
+
+    expect(items).toEqual([]);
+    expect(discarded).toBe(2);
+  });
+
+  it("niente di buono e qualcosa di scartato: si dichiara illeggibile", () => {
+    expect(() => keepOrFail({ items: [], discarded: 3 }, "boom")).toThrowError(
+      AiError,
+    );
+  });
+
+  it("niente di buono e niente di scartato: è davvero vuota", () => {
+    expect(keepOrFail({ items: [], discarded: 0 }, "boom")).toEqual([]);
+  });
+
+  it("qualcosa di buono passa, anche con degli scarti", () => {
+    expect(keepOrFail({ items: ["a"], discarded: 5 }, "boom")).toEqual(["a"]);
+  });
+});
+
+describe("sift", () => {
+  const schema = z.object({ a: z.number() });
+
+  it("tiene i buoni e conta i cattivi", () => {
+    const esito = sift([{ a: 1 }, { a: "no" }, { b: 2 }, { a: 3 }], schema);
+    expect(esito.items).toEqual([{ a: 1 }, { a: 3 }]);
+    expect(esito.discarded).toBe(2);
+  });
+
+  it("regge il null di una risposta senza elementi", () => {
+    expect(sift(null, schema)).toEqual({ items: [], discarded: 0 });
   });
 });
 

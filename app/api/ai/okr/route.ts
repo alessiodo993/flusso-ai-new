@@ -3,7 +3,14 @@ import { z } from "zod";
 import { AiError, askJson } from "@/lib/ai/client";
 import { OKR_SYSTEM, okrPrompt } from "@/lib/ai/prompts";
 import { aiRoute } from "@/lib/ai/route";
-import { okrSchema, toText, type KeyResultAnalysis } from "@/lib/ai/schemas";
+import {
+  keepOrFail,
+  okrItem,
+  okrSchema,
+  sift,
+  toText,
+  type KeyResultAnalysis,
+} from "@/lib/ai/schemas";
 import { supabaseServer } from "@/lib/supabase/server";
 import { toOkr } from "@/lib/types";
 
@@ -63,8 +70,15 @@ export async function POST(request: Request) {
 
     const known = new Set(okr.key_results.map((kr) => kr.id));
 
-    const analisi: KeyResultAnalysis[] = (raw.analisi ?? [])
-      .filter((one) => known.has(one.keyResultId))
+    const sifted = sift(raw.analisi, okrItem);
+    let discarded = sifted.discarded;
+
+    const analisi: KeyResultAnalysis[] = sifted.items
+      .filter((one) => {
+        if (known.has(one.keyResultId)) return true;
+        discarded += 1;
+        return false;
+      })
       .map((one) => ({
         keyResultId: one.keyResultId,
         measurable: one.misurabile === true,
@@ -76,7 +90,20 @@ export async function POST(request: Request) {
         ),
       }));
 
-    return { analisi, commento: toText(raw.commento, 400) };
+    if (discarded > 0) {
+      console.warn(`[okr] ${discarded} analisi scartate`);
+    }
+
+    return {
+      // Qui il silenzio era la bugia più grossa dell'app: nessuna analisi
+      // valida diventava «i risultati chiave sono già misurabili così come
+      // sono», cioè un giudizio positivo che nessuno aveva dato.
+      analisi: keepOrFail(
+        { items: analisi, discarded },
+        "L'analisi è tornata riferita a risultati chiave che non esistono. Riprova.",
+      ),
+      commento: toText(raw.commento, 400),
+    };
   });
 }
 

@@ -62,7 +62,10 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 export function useAiCapture() {
   return useMutation({
     mutationFn: (testo: string) =>
-      post<{ proposte: CaptureProposal[] }>("/api/ai/capture", { testo }),
+      post<{ proposte: CaptureProposal[]; scartate: number }>(
+        "/api/ai/capture",
+        { testo },
+      ),
   });
 }
 

@@ -16,9 +16,13 @@ import {
 } from "@/lib/ai/prompts";
 import {
   captureSchema,
+  okrItem,
   okrSchema,
+  planItem,
   planSchema,
+  shutdownItem,
   shutdownSchema,
+  sift,
 } from "@/lib/ai/schemas";
 import type { DayISO } from "@/lib/time";
 import type { Okr, Project, Task } from "@/lib/types";
@@ -86,8 +90,13 @@ async function cattura(testo: string) {
       tasks: esistenti,
     }),
   });
-  const proposte = normalizeCapture({ raw, projects: progetti, tasks: esistenti });
+  const { items: proposte, discarded } = normalizeCapture({
+    raw,
+    projects: progetti,
+    tasks: esistenti,
+  });
   console.log(`\n--- «${testo.slice(0, 60)}…»`);
+  if (discarded > 0) console.log(`(${discarded} proposte scartate)`);
   for (const one of proposte) {
     console.log(
       JSON.stringify({
@@ -185,7 +194,7 @@ describe.skipIf(!attivo)("planner", () => {
     });
 
     console.log("\n--- planner\n", JSON.stringify(raw, null, 2));
-    const ids = (raw.scelte ?? []).map((one) => one.taskId);
+    const ids = sift(raw.scelte, planItem).items.map((one) => one.taskId);
     expect(ids.every((id) => ["a", "b", "c", "d"].includes(id))).toBe(true);
   });
 });
@@ -216,7 +225,9 @@ describe.skipIf(!attivo)("analisi dei risultati chiave", () => {
     });
 
     console.log("\n--- okr\n", JSON.stringify(raw, null, 2));
-    const byId = new Map((raw.analisi ?? []).map((one) => [one.keyResultId, one]));
+    const byId = new Map(
+      sift(raw.analisi, okrItem).items.map((one) => [one.keyResultId, one]),
+    );
     expect(byId.get("k1")?.misurabile).toBe(false);
     expect(byId.get("k2")?.misurabile).toBe(true);
   });
@@ -241,6 +252,6 @@ describe.skipIf(!attivo)("shutdown", () => {
     });
 
     console.log("\n--- shutdown\n", JSON.stringify(raw, null, 2));
-    expect((raw.suggerimenti ?? []).length).toBeGreaterThan(0);
+    expect(sift(raw.suggerimenti, shutdownItem).items.length).toBeGreaterThan(0);
   });
 });

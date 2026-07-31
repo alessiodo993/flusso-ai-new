@@ -57,7 +57,7 @@ Esiste solo in sviluppo.
 |---|---|
 | `npm run dev` | server di sviluppo |
 | `npm run build` | build di produzione |
-| `npm test` | 390 test su tutta la logica pura |
+| `npm test` | 399 test su tutta la logica pura |
 | `npm run typecheck` | TypeScript in modalità strict |
 | `npm run lint` | ESLint |
 | `npm run db:test` | applica le migrazioni su un Postgres locale e verifica RLS e privilegi |

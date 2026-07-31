@@ -4,7 +4,7 @@ import { AiError, askJson } from "@/lib/ai/client";
 import { loadContext } from "@/lib/ai/context";
 import { PLAN_SYSTEM, planPrompt } from "@/lib/ai/prompts";
 import { aiRoute } from "@/lib/ai/route";
-import { planSchema, toText } from "@/lib/ai/schemas";
+import { keepOrFail, planItem, planSchema, sift, toText } from "@/lib/ai/schemas";
 import { isListable } from "@/lib/list-view";
 
 export const runtime = "nodejs";
@@ -56,9 +56,15 @@ export async function POST(request: Request) {
     const known = new Set(candidates.map((task) => task.id));
     const seen = new Set<string>();
 
-    const scelte = (raw.scelte ?? [])
+    const sifted = sift(raw.scelte, planItem);
+    let discarded = sifted.discarded;
+
+    const scelte = sifted.items
       .filter((choice) => {
-        if (!known.has(choice.taskId) || seen.has(choice.taskId)) return false;
+        if (!known.has(choice.taskId) || seen.has(choice.taskId)) {
+          discarded += 1;
+          return false;
+        }
         seen.add(choice.taskId);
         return true;
       })
@@ -67,6 +73,18 @@ export async function POST(request: Request) {
         motivo: toText(choice.motivo, 200),
       }));
 
-    return { scelte, nota: toText(raw.nota, 300) };
+    if (discarded > 0) {
+      console.warn(`[planner] ${discarded} scelte scartate`);
+    }
+
+    return {
+      // Un piano vuoto perché nessun id era buono non è «non c'è niente da
+      // pianificare»: è una risposta da rifare, e l'utente deve poterlo fare.
+      scelte: keepOrFail(
+        { items: scelte, discarded },
+        "Ho ricevuto una selezione che non corrisponde a nessun task della tua Lista. Riprova.",
+      ),
+      nota: toText(raw.nota, 300),
+    };
   });
 }

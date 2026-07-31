@@ -5,7 +5,7 @@ import { AiError, askJson } from "@/lib/ai/client";
 import { loadContext } from "@/lib/ai/context";
 import { CAPTURE_SYSTEM, capturePrompt } from "@/lib/ai/prompts";
 import { aiRoute } from "@/lib/ai/route";
-import { captureSchema, MAX_CAPTURE_CHARS } from "@/lib/ai/schemas";
+import { captureSchema, keepOrFail, MAX_CAPTURE_CHARS } from "@/lib/ai/schemas";
 import { todayISO } from "@/lib/time";
 
 export const runtime = "nodejs";
@@ -45,6 +45,10 @@ export async function POST(request: Request) {
     const raw = await askJson({
       schema: captureSchema,
       system: CAPTURE_SYSTEM,
+      // Dodici proposte con descrizione e sottotask non stanno in quattromila
+      // token: la risposta si troncava a metà proprio sulle frasi più ricche,
+      // cioè quelle per cui questa schermata esiste.
+      maxTokens: 8000,
       prompt: capturePrompt({
         text: parsed.data.testo,
         today,
@@ -53,6 +57,20 @@ export async function POST(request: Request) {
       }),
     });
 
-    return { proposte: normalizeCapture({ raw, projects, tasks }) };
+    const { items, discarded } = normalizeCapture({ raw, projects, tasks });
+
+    if (discarded > 0) {
+      console.warn(
+        `[cattura] ${discarded} proposte scartate su ${discarded + items.length}`,
+      );
+    }
+
+    return {
+      proposte: keepOrFail(
+        { items, discarded },
+        "Ho capito la frase ma non sono riuscito a ricavarne proposte utilizzabili: si riferivano a task che non esistono più. Riprova.",
+      ),
+      scartate: discarded,
+    };
   });
 }

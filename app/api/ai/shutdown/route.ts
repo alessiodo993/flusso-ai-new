@@ -4,7 +4,13 @@ import { AiError, askJson } from "@/lib/ai/client";
 import { loadContext } from "@/lib/ai/context";
 import { SHUTDOWN_SYSTEM, shutdownPrompt } from "@/lib/ai/prompts";
 import { aiRoute } from "@/lib/ai/route";
-import { shutdownSchema, toText } from "@/lib/ai/schemas";
+import {
+  keepOrFail,
+  shutdownItem,
+  shutdownSchema,
+  sift,
+  toText,
+} from "@/lib/ai/schemas";
 import { parseHHMM, snap } from "@/lib/time";
 
 export const runtime = "nodejs";
@@ -54,15 +60,25 @@ export async function POST(request: Request) {
     const known = new Set(pending.map((task) => task.id));
     const seen = new Set<string>();
 
-    const suggerimenti = (raw.suggerimenti ?? [])
+    const sifted = sift(raw.suggerimenti, shutdownItem);
+    let discarded = sifted.discarded;
+
+    const suggerimenti = sifted.items
       .flatMap((one) => {
-        if (!known.has(one.taskId) || seen.has(one.taskId)) return [];
+        if (!known.has(one.taskId) || seen.has(one.taskId)) {
+          discarded += 1;
+          return [];
+        }
 
         const minute = one.oraInizio ? parseHHMM(one.oraInizio.slice(0, 5)) : null;
-        if (minute === null) return [];
+        if (minute === null) {
+          discarded += 1;
+          return [];
+        }
 
         const start = snap(minute);
         if (!ranges.some((range) => start >= range.start && start < range.end)) {
+          discarded += 1;
           return [];
         }
 
@@ -77,7 +93,17 @@ export async function POST(request: Request) {
       })
       .slice(0, 3);
 
-    return { suggerimenti, commento: toText(raw.commento, 400) };
+    if (discarded > 0) {
+      console.warn(`[shutdown] ${discarded} suggerimenti scartati`);
+    }
+
+    return {
+      suggerimenti: keepOrFail(
+        { items: suggerimenti, discarded },
+        "Gli orari proposti cadevano tutti fuori dai tuoi spazi liberi di domani. Riprova, oppure sistemali a mano.",
+      ),
+      commento: toText(raw.commento, 400),
+    };
   });
 }
 

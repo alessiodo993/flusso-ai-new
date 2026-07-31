@@ -27,6 +27,7 @@ export function MagicCapture() {
   const [text, setText] = useState("");
   const [proposals, setProposals] = useState<CaptureProposal[] | null>(null);
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
+  const [discarded, setDiscarded] = useState(0);
   const textarea = useRef<HTMLTextAreaElement>(null);
 
   const { byId: projectsById } = useProjects();
@@ -42,6 +43,7 @@ export function MagicCapture() {
   const reset = useCallback(() => {
     setProposals(null);
     setAccepted(new Set());
+    setDiscarded(0);
     capture.reset();
   }, [capture]);
 
@@ -68,8 +70,9 @@ export function MagicCapture() {
     speech.stop();
 
     capture.mutate(value, {
-      onSuccess: ({ proposte }) => {
+      onSuccess: ({ proposte, scartate }) => {
         setProposals(proposte);
+        setDiscarded(scartate);
         // Creare e unire sono reversibili; completare ed eliminare molto meno.
         setAccepted(
           new Set(
@@ -153,6 +156,7 @@ export function MagicCapture() {
       {proposals ? (
         <Review
           proposals={proposals}
+          discarded={discarded}
           accepted={accepted}
           projectsById={projectsById}
           onToggle={(id) =>
@@ -235,12 +239,15 @@ export function MagicCapture() {
 
 function Review({
   proposals,
+  discarded,
   accepted,
   projectsById,
   onToggle,
   onRename,
 }: {
   proposals: CaptureProposal[];
+  /** Proposte arrivate ma inservibili: dirlo evita di darne la colpa a chi ha scritto. */
+  discarded: number;
   accepted: Set<string>;
   projectsById: Map<string, import("@/lib/types").Project>;
   onToggle: (id: string) => void;
@@ -257,6 +264,14 @@ function Review({
 
   return (
     <ul className="space-y-2 pb-1">
+      {discarded > 0 && (
+        <li className="rounded-flusso-md bg-sunken p-2.5 text-xs text-ink-soft">
+          {discarded === 1
+            ? "Una proposta è stata scartata perché parlava di un task che non esiste più."
+            : `${discarded} proposte sono state scartate perché parlavano di task che non esistono più.`}
+        </li>
+      )}
+
       {proposals.map((proposal) => (
         <ProposalCard
           key={proposal.id}

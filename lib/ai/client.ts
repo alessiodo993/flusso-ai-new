@@ -119,29 +119,62 @@ export async function askJson<T>({
   system,
   prompt,
   maxTokens = 4000,
+  attempts = 2,
 }: {
   schema: z.ZodType<T>;
   system: string;
   prompt: string;
   maxTokens?: number;
+  /**
+   * Quante volte chiedere, se la risposta arriva illeggibile. Un JSON storto
+   * è quasi sempre un incidente della singola generazione: ripetere la
+   * domanda costa una frazione di secondo e un decimo di centesimo, mentre
+   * far ricominciare l'utente costa il pensiero che stava scaricando.
+   */
+  attempts?: number;
 }): Promise<T> {
-  let text: string;
+  let last: AiError | null = null;
 
-  try {
-    const response = await anthropic().messages.create({
-      model: MODEL,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: "user", content: prompt }],
-    });
+  for (let attempt = 0; attempt < Math.max(1, attempts); attempt += 1) {
+    let text: string;
 
-    const block = response.content.find((one) => one.type === "text");
-    text = block && block.type === "text" ? block.text : "";
-  } catch (error) {
-    throw translate(error);
+    try {
+      const response = await anthropic().messages.create({
+        model: MODEL,
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      // Una risposta tagliata a metà non è illeggibile per caso: è finito lo
+      // spazio. Dirlo permette di suggerire l'unica cosa che funziona —
+      // dividere il testo — invece di far riprovare all'infinito.
+      if (response.stop_reason === "max_tokens") {
+        throw new AiError(
+          "invalid_output",
+          "La risposta si è interrotta: c'era troppa roba da elaborare in un colpo solo. Dividi il testo in due catture più corte.",
+        );
+      }
+
+      const block = response.content.find((one) => one.type === "text");
+      text = block && block.type === "text" ? block.text : "";
+    } catch (error) {
+      throw translate(error);
+    }
+
+    try {
+      return parseJson(schema, text);
+    } catch (error) {
+      // Solo il formato si riprova: un errore di rete o di credito non
+      // cambia esito alla seconda domanda.
+      if (!(error instanceof AiError) || error.kind !== "invalid_output") {
+        throw error;
+      }
+      last = error;
+    }
   }
 
-  return parseJson(schema, text);
+  throw last ?? new AiError("invalid_output", "Chiamata all'AI non riuscita.");
 }
 
 /**
@@ -151,51 +184,57 @@ export async function askJson<T>({
  * che sbaglia più spesso.
  */
 export function parseJson<T>(schema: z.ZodType<T>, raw: string): T {
-  const candidate = extractObject(raw);
-  if (candidate === null) {
+  const candidates = extractObjects(raw);
+  if (candidates.length === 0) {
     throw new AiError(
       "invalid_output",
       "L'AI ha risposto in un formato che non riusciamo a leggere. Riprova.",
     );
   }
 
-  let value: unknown;
-  try {
-    value = JSON.parse(candidate);
-  } catch {
-    throw new AiError(
-      "invalid_output",
-      "L'AI ha risposto con un JSON incompleto. Riprova.",
-    );
+  let readable = false;
+
+  // Il primo oggetto non è per forza quello buono: capita che il modello ne
+  // scriva uno d'esempio prima di quello vero. Vince il primo che ha la forma
+  // giusta, non il primo che incontra il lettore.
+  for (const candidate of candidates) {
+    let value: unknown;
+    try {
+      value = JSON.parse(candidate);
+    } catch {
+      continue;
+    }
+    readable = true;
+
+    const parsed = schema.safeParse(value);
+    if (parsed.success) return parsed.data;
   }
 
-  const parsed = schema.safeParse(value);
-  if (!parsed.success) {
-    throw new AiError(
-      "invalid_output",
-      "La risposta dell'AI non ha la forma attesa. Riprova.",
-    );
-  }
-  return parsed.data;
+  throw new AiError(
+    "invalid_output",
+    readable
+      ? "La risposta dell'AI non ha la forma attesa. Riprova."
+      : "L'AI ha risposto con un JSON incompleto. Riprova.",
+  );
 }
 
 /**
- * Il primo oggetto JSON bilanciato dentro il testo.
+ * Gli oggetti JSON bilanciati dentro il testo, nell'ordine in cui compaiono.
  *
  * Contare le parentesi invece di tagliare fra la prima `{` e l'ultima `}`:
  * quel taglio ingoia anche l'eventuale coda di testo dopo l'oggetto, e le
  * graffe dentro le stringhe — un titolo come «rivedi {bozza}» — spostano il
  * conteggio se non si tiene conto delle virgolette.
  */
-function extractObject(raw: string): string | null {
-  const start = raw.indexOf("{");
-  if (start === -1) return null;
+function extractObjects(raw: string): string[] {
+  const found: string[] = [];
 
+  let start = -1;
   let depth = 0;
   let inString = false;
   let escaped = false;
 
-  for (let i = start; i < raw.length; i += 1) {
+  for (let i = 0; i < raw.length; i += 1) {
     const char = raw[i];
 
     if (inString) {
@@ -205,13 +244,16 @@ function extractObject(raw: string): string | null {
       continue;
     }
 
-    if (char === '"') inString = true;
-    else if (char === "{") depth += 1;
-    else if (char === "}") {
+    if (char === '"') {
+      if (depth > 0) inString = true;
+    } else if (char === "{") {
+      if (depth === 0) start = i;
+      depth += 1;
+    } else if (char === "}" && depth > 0) {
       depth -= 1;
-      if (depth === 0) return raw.slice(start, i + 1);
+      if (depth === 0) found.push(raw.slice(start, i + 1));
     }
   }
 
-  return null;
+  return found;
 }

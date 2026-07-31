@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { AiError } from "@/lib/ai/client";
 import { ENERGIES, type Energy } from "@/lib/types";
 
 /**
@@ -10,13 +11,26 @@ import { ENERGIES, type Energy } from "@/lib/types";
  * quasi giusta — energia `"molto alta"`, stima di 900 minuti — in un errore
  * secco, e all'utente tocca riscrivere tutto. I limiti si dichiarano nel
  * prompt e si fanno rispettare qui sotto, clampando invece di rifiutare.
+ *
+ * Due regole nate da altrettanti modi di fallire in silenzio.
+ *
+ * **La chiave di primo livello è obbligatoria.** Quando era facoltativa, una
+ * risposta con il nome sbagliato — `proposals` invece di `proposte` —
+ * attraversava lo schema come un successo con zero elementi, e l'utente si
+ * sentiva dire che nella sua frase non c'era niente da fare. Un output che non
+ * sappiamo leggere deve dirsi illeggibile, non vuoto.
+ *
+ * **Gli elementi si convalidano uno per uno**, e per questo entrano come
+ * `unknown`. Con un `z.array(schema)` bastava una voce storta su dodici per
+ * far cadere l'intera risposta: più cose contiene una frase, più è probabile
+ * che una vada male, e si perdevano anche le undici buone.
  */
 
 // ---------------------------------------------------------------------------
 // Cattura magica
 // ---------------------------------------------------------------------------
 
-const captureItem = z.object({
+export const captureItem = z.object({
   azione: z.string(),
   titolo: z.string().nullish(),
   taskId: z.string().nullish(),
@@ -30,7 +44,7 @@ const captureItem = z.object({
 });
 
 export const captureSchema = z.object({
-  proposte: z.array(captureItem).nullish(),
+  proposte: z.array(z.unknown()).nullable(),
 });
 
 export type CaptureAction = "crea" | "unisci" | "completa" | "elimina";
@@ -56,15 +70,13 @@ export type CaptureProposal = {
 // Planner
 // ---------------------------------------------------------------------------
 
+export const planItem = z.object({
+  taskId: z.string(),
+  motivo: z.string().nullish(),
+});
+
 export const planSchema = z.object({
-  scelte: z
-    .array(
-      z.object({
-        taskId: z.string(),
-        motivo: z.string().nullish(),
-      }),
-    )
-    .nullish(),
+  scelte: z.array(z.unknown()).nullable(),
   /** Il modello può dire che qualcosa non torna: lo mostriamo com'è. */
   nota: z.string().nullish(),
 });
@@ -73,17 +85,15 @@ export const planSchema = z.object({
 // Analisi dei risultati chiave
 // ---------------------------------------------------------------------------
 
+export const okrItem = z.object({
+  keyResultId: z.string(),
+  misurabile: z.boolean().nullish(),
+  problema: z.string().nullish(),
+  riformulazione: z.string().nullish(),
+});
+
 export const okrSchema = z.object({
-  analisi: z
-    .array(
-      z.object({
-        keyResultId: z.string(),
-        misurabile: z.boolean().nullish(),
-        problema: z.string().nullish(),
-        riformulazione: z.string().nullish(),
-      }),
-    )
-    .nullish(),
+  analisi: z.array(z.unknown()).nullable(),
   commento: z.string().nullish(),
 });
 
@@ -98,18 +108,67 @@ export type KeyResultAnalysis = {
 // Shutdown
 // ---------------------------------------------------------------------------
 
+export const shutdownItem = z.object({
+  taskId: z.string(),
+  oraInizio: z.string().nullish(),
+  motivo: z.string().nullish(),
+});
+
 export const shutdownSchema = z.object({
-  suggerimenti: z
-    .array(
-      z.object({
-        taskId: z.string(),
-        oraInizio: z.string().nullish(),
-        motivo: z.string().nullish(),
-      }),
-    )
-    .nullish(),
+  suggerimenti: z.array(z.unknown()).nullable(),
   commento: z.string().nullish(),
 });
+
+// ---------------------------------------------------------------------------
+// Setaccio
+// ---------------------------------------------------------------------------
+
+/** Cosa è passato, e quanto è rimasto nel setaccio. */
+export type Sifted<T> = {
+  items: T[];
+  /** Voci che il modello ha prodotto e che non abbiamo potuto usare. */
+  discarded: number;
+};
+
+/**
+ * Convalida gli elementi uno per uno, tenendo i buoni.
+ *
+ * Il numero di scarti non è statistica: è l'unica cosa che distingue «il
+ * modello ha detto che non c'era niente da fare» da «il modello ha risposto e
+ * noi non ci abbiamo capito niente». Senza, le due cose arrivano all'utente
+ * con la stessa faccia — e la seconda gli dice che ha scritto male lui.
+ */
+export function sift<T>(
+  raw: readonly unknown[] | null | undefined,
+  schema: z.ZodType<T>,
+): Sifted<T> {
+  const items: T[] = [];
+  let discarded = 0;
+
+  for (const one of raw ?? []) {
+    const parsed = schema.safeParse(one);
+    if (parsed.success) items.push(parsed.data);
+    else discarded += 1;
+  }
+
+  return { items, discarded };
+}
+
+/**
+ * Quello che è passato, o un errore se non è passato **niente**.
+ *
+ * Zero elementi buoni e qualche scarto non è una risposta vuota: è una
+ * risposta che non siamo riusciti a usare, e va detto. Prima finiva nello
+ * stesso ramo del «non c'era niente da fare» — con il risultato che l'app
+ * dava la colpa all'utente di un errore suo, e per giunta senza offrirgli il
+ * pulsante per riprovare.
+ */
+export function keepOrFail<T>(sifted: Sifted<T>, message: string): T[] {
+  if (sifted.items.length === 0 && sifted.discarded > 0) {
+    throw new AiError("invalid_output", message);
+  }
+  return sifted.items;
+}
 
 // ---------------------------------------------------------------------------
 // Normalizzazione: qui si fanno rispettare i limiti dichiarati nel prompt
